@@ -39,12 +39,38 @@ class DirectedGraph(object):
                 else:
                     q.append((self.nodes[i],level+1))
 
+    def adjacency_matrix(self):
+        import numpy
+        ids = {}
+        nid = 0
+        for i in self.nodes.values():
+            ids[i.value] = nid
+            nid += 1
+
+        m = numpy.zeros((nid,nid), dtype=numpy.int)
+        for i in self.nodes.values():
+            for j in i.outgoing:
+                m[ids[i.value],ids[j]] = numpy.int(1)
+
+        rids = {}
+        for k in ids:
+            rids[ids[k]] = k
+
+        return (rids, numpy.matrix(m))
+
 if __name__ == '__main__':
+    from algorithms import *
+
     dg = DirectedGraph()
     dg.connect('a', 'b')
     dg.connect('b', 'c')
     dg.connect('b', 'd')
-    dg.connect('b', 'a')
+    dg.connect('d', 'a')
+
+    print graph_string(dg)
 
     for node,level in dg.walk('a'):
         print "%s level[%d]" % (node,level)
+
+    cylic = list(find_cylic_nodes(dg))
+    print 'cyclic nodes: %s' % (cylic)

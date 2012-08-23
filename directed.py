@@ -29,6 +29,13 @@ class DirectedGraph(object):
         self.nodes[src].outgoing.add(dst)
         self.nodes[dst].incoming.add(src)
 
+    def connectedQ(self, src, dst):
+        src = self.nodes[src]
+        for i in src.outgoing:
+            if i == dst:
+                return True
+        return False
+
     def walk(self, src, direction='outgoing'):
         src = self.nodes.setdefault(src, DirectedGraph.Node(src))
         q = deque([(src,0)])
@@ -43,6 +50,24 @@ class DirectedGraph(object):
                     continue
                 else:
                     q.append((self.nodes[i],level+1))
+
+    def stackwalk(self, src, direction='outgoing'):
+        src = self.nodes.setdefault(src, DirectedGraph.Node(src))
+        q = deque([[src.value]])
+        seen = set([src.value])
+
+        while len(q) > 0:
+            stack = q.popleft()
+            yield stack
+            seen.add(stack[-1])
+            n = self.nodes[stack[-1]]
+            for i in (n.outgoing if direction == 'outgoing' else n.incoming):
+                if i in seen:
+                    continue
+                else:
+                    newstack = copy.copy(stack)
+                    newstack.append(i)
+                    q.append(newstack)
 
     def adjacency_matrix(self):
         import numpy
@@ -76,6 +101,9 @@ if __name__ == '__main__':
 
     for node,level in dg.walk('a'):
         print "%s level[%d]" % (node,level)
+
+    for stack in dg.stackwalk('a'):
+        print stack
 
     cylic = list(find_cylic_nodes(dg))
     print 'cyclic nodes: %s' % (cylic)

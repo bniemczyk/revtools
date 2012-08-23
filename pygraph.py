@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from collections import deque
+import copy
 
 class DAG(object):
     class Node(object):
@@ -7,6 +8,9 @@ class DAG(object):
             self.outgoing = set()
             self.incoming = set()
             self.value = value
+
+    def copy():
+        return copy.deepcopy(self)
 
     def __init__(self):
         self.nodes = {}

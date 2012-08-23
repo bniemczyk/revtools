@@ -17,6 +17,9 @@ class DirectedGraph(object):
     def __init__(self):
         self.nodes = {}
 
+    def add_node(self, node):
+        self.nodes.setdefault(node, DirectedGraph.Node(node))
+
     def connect(self, src, dst):
         if src not in self.nodes:
             self.nodes[src] = DirectedGraph.Node(src)

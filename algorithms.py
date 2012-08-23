@@ -17,3 +17,4 @@ def graph_string(graph):
             if m[i,j] > 0:
                 rv.append('%s -> %s' % (nmap[i], nmap[j]))
     return ', '.join(rv)
+

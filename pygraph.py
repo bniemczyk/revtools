@@ -39,7 +39,6 @@ class DAG(object):
                 else:
                     q.append((self.nodes[i],level+1))
 
-
 if __name__ == '__main__':
     dag = DAG()
     dag.connect('a', 'b')

@@ -2,6 +2,8 @@
 from collections import deque
 import copy
 
+# it may be simpler to represent these as an adjacency matrix directly, but i plan
+# on using some big ass graphs, so we save some memory by doing it this way
 class DirectedGraph(object):
     class Node(object):
         def __init__(self, value):

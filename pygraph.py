@@ -2,7 +2,7 @@
 from collections import deque
 import copy
 
-class DAG(object):
+class DirectedGraph(object):
     class Node(object):
         def __init__(self, value):
             self.outgoing = set()
@@ -17,15 +17,15 @@ class DAG(object):
 
     def connect(self, src, dst):
         if src not in self.nodes:
-            self.nodes[src] = DAG.Node(src)
+            self.nodes[src] = DirectedGraph.Node(src)
         if dst not in self.nodes:
-            self.nodes[dst] = DAG.Node(dst)
+            self.nodes[dst] = DirectedGraph.Node(dst)
 
         self.nodes[src].outgoing.add(dst)
         self.nodes[dst].incoming.add(src)
 
     def walk(self, src, direction='outgoing'):
-        src = self.nodes.setdefault(src, DAG.Node(src))
+        src = self.nodes.setdefault(src, DirectedGraph.Node(src))
         q = deque([(src,0)])
         seen = set([src.value])
 
@@ -40,11 +40,11 @@ class DAG(object):
                     q.append((self.nodes[i],level+1))
 
 if __name__ == '__main__':
-    dag = DAG()
-    dag.connect('a', 'b')
-    dag.connect('b', 'c')
-    dag.connect('b', 'd')
-    dag.connect('b', 'a')
+    dg = DirectedGraph()
+    dg.connect('a', 'b')
+    dg.connect('b', 'c')
+    dg.connect('b', 'd')
+    dg.connect('b', 'a')
 
-    for node,level in dag.walk('a'):
+    for node,level in dg.walk('a'):
         print "%s level[%d]" % (node,level)

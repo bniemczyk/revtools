@@ -2,3 +2,4 @@
 from directed import *
 from algorithms import *
 from callgraph import *
+from functiongraph import *

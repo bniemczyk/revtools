@@ -30,8 +30,6 @@ class CallGraph(directed.DirectedGraph):
 
             function.tag(idc.LocByName(n), 'distance %s' % (function_name), l)
 
-    # this is super slow because our adjacency_matrix is fucking huge, i need to 
-    # rewrite find_cylic_nodes to work via domination analysis
     def tag_recursive(self):
         import function
         import idautils
@@ -48,6 +46,17 @@ class CallGraph(directed.DirectedGraph):
             
             if len(tags) > 0:
                 function.tag(idc.LocByName(f), 'recursive', tags)
+
+    def tag_popularity(self):
+        import function
+        import idautils
+        import idc
+        import algorithms
+        funcs = set(idautils.Functions())
+
+        for fa in funcs:
+            f = idc.GetTrueName(fa)
+            function.tag(fa, 'popularity', algorithms.popularity(self, f))
 
     def adjacency_matrix(self):
         print 'bulding adjacency matrix of call graph'

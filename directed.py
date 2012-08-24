@@ -88,6 +88,16 @@ class DirectedGraph(object):
 
         return (rids, numpy.matrix(m))
 
+    def _edge_count(self):
+        ec = 0
+        for n in self.nodes:
+            ec += len(self.nodes[n].outgoing)
+        return ec
+
+    def cyclomatic_complexity(self):
+        e = self._edge_count()
+        return e - len(self.nodes) + 2
+
 if __name__ == '__main__':
     from algorithms import *
 

@@ -60,16 +60,18 @@ class FunctionGraph(directed.DirectedGraph):
         cg = callgraph.CallGraph(includeImports=False)
 
         graphs = {}
+        _reversed = {}
 
         fns = set(idautils.Functions())
         for f in fns:
             graphs[f] = FunctionGraph(f)
+            _reversed[f] = FunctionGraph._tag_val(i, 'reversed') != None
 
         for i in fns:
             ac = 0
-            if FunctionGraph._tag_val(i, 'reversed') == None:
+            if not _reversed[i]:
                 for j,l in cg.walk(idc.GetTrueName(i), direction='outgoing'):
-                    if FunctionGraph._tag_val(i, 'reversed') != None:
+                    if _reversed[idc.LocByName(j)]:
                         continue
                     ac += graphs[idc.LocByName(j)].cyclomatic_complexity()
 

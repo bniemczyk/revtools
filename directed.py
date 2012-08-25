@@ -11,11 +11,15 @@ class DirectedGraph(object):
             self.incoming = set()
             self.value = value
 
+    def clear():
+        self.nodes = {}
+
     def copy():
         return copy.deepcopy(self)
 
     def __init__(self):
         self.nodes = {}
+        self.exit_nodes = set()
 
     def add_node(self, node):
         self.nodes.setdefault(node, DirectedGraph.Node(node))
@@ -28,6 +32,28 @@ class DirectedGraph(object):
 
         self.nodes[src].outgoing.add(dst)
         self.nodes[dst].incoming.add(src)
+
+    def strip_edges_to(self, dst):
+        n = self.nodes[dst]
+        for i in n.incoming:
+            ni = self.nodes[i]
+            ni.outgoing = filter(lambda x: x != dst, ni.outgoing)
+        n.incoming = set()
+
+    def strip_edges_from(self, src):
+        n = self.nodes[src]
+        for i in n.outgoing:
+            ni = self.nodes[i]
+            ni.incoming = filter(lambda x: x != src, ni.incoming)
+        n.outgoing = set()
+
+    def remove_node(self, n):
+        self.strip_edges_to(n)
+        self.strip_edges_from(n)
+        del self.nodes[n]
+
+    def __contains__(self, n):
+        return n in self.nodes
 
     def connectedQ(self, src, dst):
         src = self.nodes[src]
@@ -49,7 +75,14 @@ class DirectedGraph(object):
                 if i in seen:
                     continue
                 else:
+                    seen.add(i)
                     q.append((self.nodes[i],level+1))
+
+    def within_distance(self, src, distance, direction='outgoing'):
+        for n,l in self.walk(src, direction=direction):
+            if l > distance:
+                break
+            yield n
 
     def stackwalk(self, src, direction='outgoing'):
         src = self.nodes.setdefault(src, DirectedGraph.Node(src))
@@ -67,6 +100,7 @@ class DirectedGraph(object):
                 else:
                     newstack = copy.copy(stack)
                     newstack.append(i)
+                    seen.add(i)
                     q.append(newstack)
 
     def adjacency_matrix(self):
@@ -96,7 +130,7 @@ class DirectedGraph(object):
 
     def cyclomatic_complexity(self):
         e = self._edge_count()
-        return e - len(self.nodes) + 2
+        return e - len(self.nodes) + (len(self.exit_nodes) * 2)
 
 if __name__ == '__main__':
     from algorithms import *

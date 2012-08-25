@@ -21,7 +21,12 @@ class FunctionGraph(directed.DirectedGraph):
             if not idc.isCode(idc.GetFlags(h)):
                 continue
 
+
             self.add_node(h)
+            mnem = idc.GetMnem(h)
+            if mnem == 'retn':
+                self.exit_nodes.add(h)
+
             refs = set(filter(lambda x: x >= start_addr and x <= end_addr, idautils.CodeRefsFrom(h,1)))
             nh = idc.NextHead(h, end_addr)
             if nh != idc.BADADDR and idc.isFlow(nh):
@@ -37,9 +42,17 @@ class FunctionGraph(directed.DirectedGraph):
         import idautils
 
         fns = set(idautils.Functions())
+        rv = {}
+
         for f in fns:
             fg = FunctionGraph(f)
-            function.tag(fg.start_addr, 'cyclomatic complexity', fg.cyclomatic_complexity())
+            c = fg.cyclomatic_complexity()
+            if c < 0:
+                c = 0
+            function.tag(fg.start_addr, 'cyclomatic complexity', c)
+            rv[f] = c
+
+        return rv
 
 
     @staticmethod
@@ -61,18 +74,21 @@ class FunctionGraph(directed.DirectedGraph):
 
         graphs = {}
         _reversed = {}
+        rv = {}
 
         fns = set(idautils.Functions())
         for f in fns:
             graphs[f] = FunctionGraph(f)
-            _reversed[f] = FunctionGraph._tag_val(i, 'reversed') != None
+            _reversed[f] = FunctionGraph._tag_val(f, 'reversed') != None
+            if _reversed[f]:
+                cg.strip_edges_to(idc.GetTrueName(f))
 
         for i in fns:
             ac = 0
-            if not _reversed[i]:
-                for j,l in cg.walk(idc.GetTrueName(i), direction='outgoing'):
-                    if _reversed[idc.LocByName(j)]:
-                        continue
-                    ac += graphs[idc.LocByName(j)].cyclomatic_complexity()
+            for j,l in cg.walk(idc.GetTrueName(i), direction='outgoing'):
+                ac += graphs[idc.LocByName(j)].cyclomatic_complexity()
 
             function.tag(i, 'aggregate complexity', ac)
+            rv[i] = ac
+
+        return rv

@@ -54,6 +54,33 @@ class FunctionGraph(directed.DirectedGraph):
 
         return rv
 
+    @staticmethod
+    def tag_xors():
+        import function
+        import idc
+        import idautils
+        import algorithms
+
+        fns = set(idautils.Functions())
+        rv = {}
+
+        for f in fns:
+            print 'analyzing %x for xor loops' % (f)
+            fg = FunctionGraph(f)
+            cylic = algorithms.find_cylic_nodes(fg)
+            rv[f] = False
+            for n in fg.nodes:
+                m = idc.GetMnem(n)
+                if m != 'xor':
+                    continue
+                op0 = idc.GetOpnd(n,0)
+                op1 = idc.GetOpnd(n,1)
+                if op0 != op1 and n in cylic:
+                    function.tag(f, 'xor in loop', True)
+                    rv[f] = True
+                    break
+
+        return rv
 
     @staticmethod
     def _tag_val(addr, tagname, default=None):

@@ -71,7 +71,14 @@ class DirectedGraph(object):
             node,level = q.popleft()
             yield (node.value,level)
             seen.add(node.value)
-            for i in (node.outgoing if direction == 'outgoing' else node.incoming):
+
+            linked = set()
+            if direction in ['either', 'outgoing']:
+                linked = linked.union(node.outgoing)
+            if direction in ['either', 'incoming']:
+                linked = linked.union(node.incoming)
+
+            for i in linked:
                 if i in seen:
                     continue
                 else:

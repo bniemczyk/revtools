@@ -11,26 +11,41 @@ class CallGraph(directed.DirectedGraph):
         funcs = set(idautils.Functions())
         for f in funcs:
             self.add_node(idc.GetTrueName(f))
-            for x in [x for x in idautils.FuncItems(f) if idaapi.is_call_insn(x)]:
+            fitems = set(idautils.FuncItems(f))
+            for x in fitems:
                 for xref in idautils.CodeRefsFrom(x,0):
+                    if xref in fitems:
+                        continue
+
                     if (not includeImports) and (not xref in funcs):
                         continue
+
                     n = idc.GetTrueName(xref)
                     if n != None and n != "":
                         self.connect(idc.GetTrueName(f), n)
 
-    def tag_distance(self, function_name):
+    def tag_distance(self, function_name, direction='incoming'):
         import function
         import idc
+        import idautils
         f = idc.LocByName(function_name)
         rv = {}
+        fns = set(idautils.Functions())
 
-        for (n,l) in self.walk(function_name, direction='incoming'):
+        for (n,l) in self.walk(function_name, direction=direction):
             if l == 0:
                 continue
 
-            function.tag(idc.LocByName(n), 'distance %s' % (function_name), l)
-            rv[idc.LocByName(n)] = l
+            loc = idc.LocByName(n)
+            if loc in fns:
+                function.tag(loc, '%s distance %s' % (direction, function_name), l)
+                rv[loc] = l
+
+        for fn in fns:
+            if fn not in rv:
+                rv[fn] = 0.0
+
+        return rv
 
     def tag_recursive(self):
         import function

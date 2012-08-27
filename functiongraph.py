@@ -27,7 +27,7 @@ class FunctionGraph(directed.DirectedGraph):
             if mnem == 'retn':
                 self.exit_nodes.add(h)
 
-            refs = set(filter(lambda x: x >= start_addr and x <= end_addr, idautils.CodeRefsFrom(h,1)))
+            refs = set(filter(lambda x: x <= end_addr and x >= start_addr, idautils.CodeRefsFrom(h,1)))
             nh = idc.NextHead(h, end_addr)
             if nh != idc.BADADDR and idc.isFlow(nh):
                 refs.add(nh)
@@ -77,6 +77,8 @@ class FunctionGraph(directed.DirectedGraph):
         rv = {}
 
         fns = set(idautils.Functions())
+        cc = {}
+
         for f in fns:
             graphs[f] = FunctionGraph(f)
             _reversed[f] = FunctionGraph._tag_val(f, 'reversed') != None
@@ -86,7 +88,10 @@ class FunctionGraph(directed.DirectedGraph):
         for i in fns:
             ac = 0
             for j,l in cg.walk(idc.GetTrueName(i), direction='outgoing'):
-                ac += graphs[idc.LocByName(j)].cyclomatic_complexity()
+                loc = idc.LocByName(j)
+                if loc not in cc:
+                    cc[loc] = graphs[loc].cyclomatic_complexity()
+                ac += cc[loc] if cc[loc] > 0 else 0
 
             function.tag(i, 'aggregate complexity', ac)
             rv[i] = ac

@@ -13,6 +13,10 @@ def _invert(dic):
         dic[k] = 1.0 / dic[k] if dic[k] != 0.0 else 0.0
     return dic
 
+def _add_one(dic):
+    for k in dic:
+        dic[k] = 1.0 + dic[k]
+
 def _coderefscount():
     fs = set(idautils.Functions())
     rv = {}
@@ -25,8 +29,14 @@ COMPLEXITY = lambda ctx: _invert(functiongraph.FunctionGraph.tag_aggregate_compl
 POPULARITY = lambda ctx: callgraph.CallGraph().tag_popularity(context=ctx)
 XREFCOUNT = lambda ctx: _coderefscount()
 
+def DISTANCE(target,direction='outgoing'):
+    return lambda ctx: _invert(callgraph.CallGraph().tag_distance(target,direction=direction))
+
+def PROXIMITY_RULESET(target):
+    return set((COMPLEXITY, DISTANCE(target,direction='either')));
+
 # handy rulesets
-DEFAULT_RULESET = [COMPLEXITY, (POPULARITY, 0.7), (XREFCOUNT, 0.7)]
+DEFAULT_RULESET = set((COMPLEXITY, (POPULARITY, 0.7), (XREFCOUNT, 0.7)))
 
 # takes a list of rules (defined above) or tuples (rule, weight).  In the
 # former case, weight = 1.0 is assumed

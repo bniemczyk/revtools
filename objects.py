@@ -2,6 +2,7 @@ import idc
 import idautils
 import random
 import function
+import switch
 
 def locate_vtables():
     heads = set(idautils.Heads())
@@ -16,8 +17,18 @@ def locate_vtables():
             continue
 
         v = idc.Dword(h)
-        if v in fns:
-            yield h
+        if v not in fns:
+            continue
+
+        iss = False
+        for x in xrefs:
+            if switch.is_switch(x):
+                iss = True
+                break
+        if iss:
+            continue
+
+        yield h
 
 def analyze_vtables():
     vtables = set(locate_vtables())

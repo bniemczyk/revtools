@@ -9,3 +9,28 @@ import objects
 import decrypt
 import resources
 import malware
+import memoize
+import directed
+import algorithms
+import callgraph
+import functiongraph
+import prioritize
+
+def analyze():
+    idc.Wait()
+
+    with memoize.m(algorithms, 'nothing'):
+        with memoize.m(functiongraph.FunctionGraph):
+            with memoize.m(callgraph.CallGraph):
+                print 'analyzing vtables'
+                objects.analyze_vtables()
+                print 'finding loops with xors'
+                FunctionGraph.tag_xors()
+                print 'prioritizing'
+                prioritize.prioritize()
+                print 'locating recursive functions'
+                cg = callgraph.CallGraph()
+                cg.tag_recursive()
+                print 'analyzing loops'
+                FunctionGraph.analyze_loops()
+

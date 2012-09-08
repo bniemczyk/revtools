@@ -156,5 +156,9 @@ if __name__ == '__main__':
     for stack in dg.stackwalk('a'):
         print stack
 
-    cylic = list(find_cylic_nodes(dg))
+    cylic = list(find_cylic_nodes(dg, 'a'))
     print 'cyclic nodes: %s' % (cylic)
+
+    print 'domination set: %s' % (dominate_sets(dg, 'a'),)
+    print 'domination tree: %s' % (graph_string(domtree(dominate_sets(dg, 'a'))))
+    print 'loop headers: %s' % (loop_headers(dg, dominate_sets(dg, 'a'), 'a'))

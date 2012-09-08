@@ -65,9 +65,8 @@ class FunctionGraph(directed.DirectedGraph):
         rv = {}
 
         for f in fns:
-            print 'analyzing %x for xor loops' % (f)
+            #print 'analyzing %x for xor loops' % (f)
             fg = FunctionGraph(f)
-            cylic = algorithms.find_cylic_nodes(fg)
             rv[f] = False
             for n in fg.nodes:
                 m = idc.GetMnem(n)
@@ -75,7 +74,7 @@ class FunctionGraph(directed.DirectedGraph):
                     continue
                 op0 = idc.GetOpnd(n,0)
                 op1 = idc.GetOpnd(n,1)
-                if op0 != op1 and n in cylic:
+                if op0 != op1 and n in algorithms.find_cylic_nodes(fg,f):
                     function.tag(f, 'xor in loop', True)
                     rv[f] = True
                     break
@@ -124,3 +123,20 @@ class FunctionGraph(directed.DirectedGraph):
             rv[i] = ac
 
         return rv
+
+    @staticmethod
+    def analyze_loops():
+        import idc
+        import idautils
+        import algorithms
+
+        for fn in idautils.Functions():
+            fg = FunctionGraph(fn)
+            ds = algorithms.dominate_sets(fg, fn)
+            hs = list(algorithms.loop_headers(fg, ds, fn))
+            hs.sort()
+            if len(hs) == 1:
+                idc.MakeNameEx(hs[0], '_loop', idc.SN_LOCAL)
+            elif len(hs) > 1:
+                for i in range(len(hs)):
+                    idc.MakeNameEx(hs[i], '_loop_%d' % (i+1), idc.SN_LOCAL)

@@ -20,8 +20,8 @@ def analyze():
     idc.Wait()
 
     with memoize.m(algorithms, 'nothing'):
-        with memoize.m(functiongraph.FunctionGraph):
-            with memoize.m(callgraph.CallGraph):
+        with memoize.m(functiongraph.FunctionGraph, 'nothing'):
+            with memoize.m(callgraph.CallGraph, 'nothing'):
                 print 'analyzing vtables'
                 objects.analyze_vtables()
                 print 'finding loops with xors'
@@ -33,4 +33,6 @@ def analyze():
                 cg.tag_recursive()
                 print 'analyzing loops'
                 FunctionGraph.analyze_loops()
+                print 'locating signed arithmetic'
+                FunctionGraph.tag_signed()
 

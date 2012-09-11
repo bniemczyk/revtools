@@ -123,12 +123,22 @@ def domtree(domset):
             rv.connect(i, n)
     return rv
 
+def dom_frontier(graph, node, domset):
+    rv = set()
+    for i,_ in graph.walk(node):
+        if i in domset[node]:
+            continue
+        for j in graph.nodes[i].incoming:
+            if j in domset[node]:
+                rv.add(i)
+    return rv
+
 def loop_headers(graph, domset, src):
     rv = set()
     for n,l in walk(graph, src):
         lh = graph.nodes[n].outgoing.intersection(domset[n])
         rv = rv.union(lh)
-    return lh
+    return rv
 
 def find_cylic_nodes(graph, src):
     ds = dominate_sets(graph, src)
@@ -143,3 +153,15 @@ def find_cylic_nodes(graph, src):
                 cns.add(n)
 
     return cns
+
+def loop_nodes(graph, loop_head, domset):
+    import copy
+    # first make a copy of the graph that only contains nodes dominated by the loop header
+    graph = copy.deepcopy(graph)
+    for n in list(graph.nodes.keys()):
+        if loop_head not in domset[n]:
+            graph.remove_node(n)
+
+    for n in list(graph.nodes.keys()):
+        if pathQ(graph, n, loop_head):
+            yield n

@@ -82,6 +82,27 @@ class FunctionGraph(directed.DirectedGraph):
         return rv
 
     @staticmethod
+    def tag_signed():
+        import function
+        import idc
+        import idautils
+        import algorithms
+
+        fns = set(idautils.Functions())
+        rv = {}
+        
+        for f in fns:
+            fg = FunctionGraph(f)
+            for n in fg.nodes:
+                m = idc.GetMnem(n).lower()
+                if m in ('jl', 'jle', 'jg', 'jge', 'js'):
+                    function.tag(f, 'signed arithmetic', True)
+                    rv[f] = True
+                    break
+
+        return rv
+
+    @staticmethod
     def _tag_val(addr, tagname, default=None):
         import function
         try:
@@ -133,10 +154,17 @@ class FunctionGraph(directed.DirectedGraph):
         for fn in idautils.Functions():
             fg = FunctionGraph(fn)
             ds = algorithms.dominate_sets(fg, fn)
+            dt = algorithms.domtree(ds)
             hs = list(algorithms.loop_headers(fg, ds, fn))
             hs.sort()
-            if len(hs) == 1:
-                idc.MakeNameEx(hs[0], '_loop', idc.SN_LOCAL)
-            elif len(hs) > 1:
-                for i in range(len(hs)):
-                    idc.MakeNameEx(hs[i], '_loop_%d' % (i+1), idc.SN_LOCAL)
+            for i in range(len(hs)):
+                lexits = set()
+                idc.MakeNameEx(hs[i], '_loop_%x' % (i+1), idc.SN_LOCAL)
+                lns = set(algorithms.loop_nodes(fg, hs[i], ds))
+                for j in lns:
+                    for k in fg.nodes[j].outgoing:
+                        if k not in lns:
+                            lexits.add(k)
+                lexits = list(lexits)
+                for j in range(len(lexits)):
+                    idc.MakeNameEx(lexits[j], '_loop_%x_exit_%x' % (i+1,j+1), idc.SN_LOCAL)

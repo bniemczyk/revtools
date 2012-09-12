@@ -56,14 +56,6 @@ def pathQ(graph, src, dst):
             return True
     return False
 
-def intersect(a, b):
-    ''' returns the intersection of 2 graphs'''
-    import copy
-    rv = copy.deepcopy(a)
-    for n in a.nodes:
-        if n not in b:
-            rv.remove_node(n)
-
 # returns a the popularity of a node, or all nodes if node=None, the popularity of a node
 # is defined as the count of nodes that have a path to reach said node excluding itself
 def popularity(graph, node=None, context=None):

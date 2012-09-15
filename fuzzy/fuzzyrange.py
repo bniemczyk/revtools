@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import math
+import numpy 
 
 # We inherit from tuple so that it's hashable and shit
 class FuzzyRange(tuple):
@@ -26,67 +26,85 @@ class FuzzyRange(tuple):
             self.a == other.a \
             and self.b == other.b
 
+    @staticmethod
+    def _numpyize(x):
+        if isinstance(x,list):
+            if hasattr(numpy, 'float128'):
+                return numpy.array(x,dtype=numpy.float128)
+            elif hasattr(numpy, 'float96'):
+                return numpy.array(x,dtype=numpy.float96)
+            else:
+                return numpy.array(x)
+        else:
+            return x
+
     def within(self, x):
-        n = 0.693147 * (self.a + self.b - 2 * x) ** 2
+        x = self._numpyize(x)
+
+        n = -0.6931471805599453  * (self.a + self.b - 2 * x) ** 2
         d = (self.a - self.b) ** 2
-        return math.exp(-n / d)
+        rv = numpy.exp(n / d)
+        return rv
 
     def greaterthan(self, x, sensitivity=1.0):
-        try:
-            result = math.exp(FuzzyRange.COMPARISON_CONSTANT/sensitivity) - 1
-            result *= math.exp(0.5 * (self.b - self.a))
-            result = result ** (2.0 / (self.a - self.b))
-            result = result ** (self.b - x)
-            result *= math.exp(self.b - x)
-            result += 1
-            result = 1.0 / result
-            return result
-        except OverflowError:
-            return 1.0 if x > self.b else 0.0
+        x = self._numpyize(x)
+
+        result = numpy.exp(FuzzyRange.COMPARISON_CONSTANT/sensitivity) - 1
+        result *= numpy.exp(0.5 * (self.b - self.a))
+        result = result ** (2.0 / (self.a - self.b))
+        bx = self.b - x
+        result = result ** bx
+        result *= numpy.exp(bx)
+        result += 1
+        result = 1.0 / result
+        return result
 
     def lessthan(self, x, sensitivity=1.0):
-        try:
-            result = math.exp(FuzzyRange.COMPARISON_CONSTANT/sensitivity) - 1
-            result *= math.exp(0.5 * (self.b - self.a))
-            result = result ** (2.0 / (self.a - self.b))
-            result = result ** (x - self.a)
-            result *= math.exp(x - self.a)
-            result += 1
-            result = 1.0 / result
-            return result
-        except OverflowError:
-            return 1.0 if x < self.a else 0.0
+        x = self._numpyize(x)
 
+        result = numpy.exp(FuzzyRange.COMPARISON_CONSTANT/sensitivity) - 1
+        result *= numpy.exp(0.5 * (self.b - self.a))
+        result = result ** (2.0 / (self.a - self.b))
+        xa = (x - self.a)
+        result = result ** xa
+        result *= numpy.exp(xa)
+        result += 1
+        result = 1.0 / result
+        return result
 
     def __repr__(self):
         if self.name != None:
-            return "FuzzyRange(%s: %d ... %d)" % (self.name, self.a, self.b)
+            return "FuzzyRange(%s: %f ... %f)" % (self.name, self.a, self.b)
         else:
-            return "FuzzyRange(%d ... %d)" % (self.a, self.b)
+            return "FuzzyRange(%f ... %f)" % (self.a, self.b)
 
 if __name__ == '__main__':
-    r = FuzzyRange(100,190, "TestRange")
+    a = 2.0
+    b = 2.5
+
+    r = FuzzyRange(a,b, "TestRange")
     print "%s: %s" % (r, type(r))
-    print "8 within %s = %f" % (r, r.within(8))
+    tests = FuzzyRange._numpyize(range(0,10)) / 2.0
 
-    print "5 > %s = %f" % (r, r.greaterthan(5))
-    print "10 > %s = %f" % (r, r.greaterthan(10))
-    print "13 > %s = %f" % (r, r.greaterthan(13))
-    print "15 > %s = %f" % (r, r.greaterthan(15))
-    print "20 > %s = %f" % (r, r.greaterthan(20))
-    print "200 > %s = %f" % (r, r.greaterthan(200))
+    results = r.within(tests)
+    for i in range(len(tests)):
+        print "%f within %s = %f" % (tests[i], r, results[i])
+    print ""
 
-    print "5 < %s = %f" % (r, r.lessthan(5))
-    print "10 < %s = %f" % (r, r.lessthan(10))
-    print "13 < %s = %f" % (r, r.lessthan(13))
-    print "15 < %s = %f" % (r, r.lessthan(15))
-    print "20 < %s = %f" % (r, r.lessthan(20))
-    print "200 < %s = %f" % (r, r.lessthan(200))
+    results = r.greaterthan(tests)
+    for i in range(len(tests)):
+        print "%f > %s = %f" % (tests[i], r, results[i])
+    print ""
+
+    results = r.lessthan(tests)
+    for i in range(len(tests)):
+        print "%f < %s = %f" % (tests[i], r, results[i])
+    print ""
 
     myhash = {}
     myhash[r] = 'Initial Range'
 
-    q = FuzzyRange(10,15, "OtherTestRange")
+    q = FuzzyRange(a,b, "OtherTestRange")
     myhash[q] = 'Other Range'
 
     print myhash

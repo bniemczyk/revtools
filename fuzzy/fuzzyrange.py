@@ -84,7 +84,7 @@ if __name__ == '__main__':
 
     r = FuzzyRange(a,b, "TestRange")
     print "%s: %s" % (r, type(r))
-    tests = FuzzyRange._numpyize(range(0,10)) / 2.0
+    tests = FuzzyRange._numpyize(range(0,20)) / 2.4
 
     results = r.within(tests)
     for i in range(len(tests)):

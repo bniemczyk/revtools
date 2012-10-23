@@ -1,20 +1,25 @@
 #!/usr/bin/env python
 from directed import *
 from algorithms import *
-from callgraph import *
-from functiongraph import *
-from prioritize import *
-
-import objects
-import decrypt
-import resources
-import malware
-import memoize
-import directed
 import algorithms
-import callgraph
-import functiongraph
-import prioritize
+import directed
+import memoize
+import fuzzy
+
+try:
+    from callgraph import *
+    from functiongraph import *
+    from prioritize import *
+    
+    import objects
+    import decrypt
+    import resources
+    import malware
+    import callgraph
+    import functiongraph
+    import prioritize
+except:
+    pass
 
 def analyze():
     idc.Wait()

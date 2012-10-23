@@ -20,11 +20,13 @@ class DirectedGraph(object):
     def __init__(self):
         self.nodes = {}
         self.exit_nodes = set()
+        self.edges = {}
+        self.metadata = {}
 
     def add_node(self, node):
         self.nodes.setdefault(node, DirectedGraph.Node(node))
 
-    def connect(self, src, dst):
+    def connect(self, src, dst, edgeValue=None):
         if src not in self.nodes:
             self.nodes[src] = DirectedGraph.Node(src)
         if dst not in self.nodes:
@@ -32,6 +34,9 @@ class DirectedGraph(object):
 
         self.nodes[src].outgoing.add(dst)
         self.nodes[dst].incoming.add(src)
+
+        if edgeValue != None:
+            self.edges.setdefault((src,dst), set()).add(edgeValue)
 
     def strip_edges_to(self, dst):
         n = self.nodes[dst]
@@ -138,6 +143,35 @@ class DirectedGraph(object):
     def cyclomatic_complexity(self):
         e = self._edge_count()
         return e - len(self.nodes) + (len(self.exit_nodes) * 2)
+
+    def visualize(self,layout='dot'):
+        import pydot
+        import tempfile
+        import os
+        dotg = pydot.Dot('tmp', graph_type='digraph')
+
+        dotnodes = {}
+        for n in self.nodes:
+            dotnodes[n] = pydot.Node(str(n))
+            dotg.add_node(dotnodes[n])
+
+        for n in self.nodes:
+            for o in self.nodes[n].outgoing:
+                if (n, o) in self.edges:
+                    for e in self.edges[(n,o)]:
+                        dotg.add_edge(pydot.Edge(dotnodes[n], dotnodes[o],label=e))
+                else:
+                    dotg.add_edge(pydot.Edge(dotnodes[n], dotnodes[o]))
+
+        f = tempfile.NamedTemporaryFile(mode='w+b',delete=False)
+
+        try:
+            f.write(dotg.to_string())
+            f.close()
+            os.system('cat %s' % (f.name,))
+            os.system('xdot --filter=%s %s' % (layout, f.name))
+        finally:
+            os.unlink(f.name)
 
 if __name__ == '__main__':
     from algorithms import *

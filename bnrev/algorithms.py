@@ -151,7 +151,7 @@ def loop_nodes(graph, loop_head, domset):
     # first make a copy of the graph that only contains nodes dominated by the loop header
     graph = copy.deepcopy(graph)
     for n in list(graph.nodes.keys()):
-        if loop_head not in domset[n]:
+        if n not in domset or loop_head not in domset[n]:
             graph.remove_node(n)
 
     for n in list(graph.nodes.keys()):

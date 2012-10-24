@@ -4,7 +4,7 @@ from algorithms import *
 import algorithms
 import directed
 import memoize
-import fuzzy
+#import fuzzy
 
 try:
     from callgraph import *

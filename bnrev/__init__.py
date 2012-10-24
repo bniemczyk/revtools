@@ -32,9 +32,9 @@ def analyze():
                 print 'finding loops with xors'
                 FunctionGraph.tag_xors()
                 print 'prioritizing'
-                prioritize.prioritize()
+                prioritize()
                 print 'locating recursive functions'
-                cg = callgraph.CallGraph()
+                cg = CallGraph()
                 cg.tag_recursive()
                 print 'analyzing loops'
                 FunctionGraph.analyze_loops()

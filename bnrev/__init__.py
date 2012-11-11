@@ -34,6 +34,10 @@ def fixup_imports(import_dic):
     if addr not in import_dic:
       continue
 
+    oldh = idc.LocByName(import_dic[addr])
+    if oldh != idc.BADADDR:
+      idc.MakeNameEx(oldh, 'nofixup_' + import_dic[addr], idc.SN_NOCHECK|idc.SN_NOWARN)
+
     print 'fixing up %s at 0x%x' % (import_dic[addr], h)
     idc.MakeNameEx(h, import_dic[addr], idc.SN_NOCHECK|idc.SN_NOWARN)
 

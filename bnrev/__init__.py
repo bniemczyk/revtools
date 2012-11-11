@@ -34,7 +34,7 @@ def fixup_imports(import_dic):
     if addr not in import_dic:
       continue
 
-    print 'fixing up %s' % (import_dic[addr])
+    print 'fixing up %s at 0x%x' % (import_dic[addr], addr)
     idc.MakeName(addr, import_dic[addr])
 
 def analyze():

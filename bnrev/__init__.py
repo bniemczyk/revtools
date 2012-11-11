@@ -35,7 +35,7 @@ def fixup_imports(import_dic):
       continue
 
     print 'fixing up %s at 0x%x' % (import_dic[addr], h)
-    idc.MakeName(h, import_dic[addr])
+    idc.MakeNameEx(h, import_dic[addr], SN_NOCHECK|SN_NOWARN)
 
 def analyze():
     idc.Wait()

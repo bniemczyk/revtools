@@ -21,6 +21,21 @@ try:
 except:
     pass
 
+def fixup_imports(import_dic):
+  idc.Wait()
+
+  heads = set(idautils.Heads())
+
+  for h in heads:
+    if idc.isCode(h):
+      continue
+
+    addr = idc.Dword(h)
+    if addr not in import_dic:
+      continue
+
+    print 'fixing up %s' % (import_dic[addr])
+
 def analyze():
     idc.Wait()
 

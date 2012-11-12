@@ -136,6 +136,8 @@ class FunctionGraph(directed.DirectedGraph):
             ac = 0
             for j,l in cg.walk(idc.GetTrueName(i), direction='outgoing'):
                 loc = idc.LocByName(j)
+                if loc not in graphs:
+                  continue
                 if loc not in cc:
                     cc[loc] = graphs[loc].cyclomatic_complexity()
                 ac += cc[loc] if cc[loc] > 0 else 0

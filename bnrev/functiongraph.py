@@ -151,6 +151,7 @@ class FunctionGraph(directed.DirectedGraph):
     @staticmethod
     def analyze_loops():
         import idc
+        import idaapi
         import idautils
         import algorithms
 
@@ -162,17 +163,17 @@ class FunctionGraph(directed.DirectedGraph):
             hs.sort()
 
             # first remove loop names so we don't have conflicts
-            for i in hs:
-              idc.MakeNameEx(i, "", idc.SN_LOCAL)
-              lns = set(algorithms.loop_nodes(fg, i, ds))
-              for j in lns:
-                  for k in fg.nodes[j].outgoing:
-                      if k not in lns:
-                        idc.MakeNameEx(k, "", idc.SN_LOCAL)
-             
             for i in range(len(hs)):
                 lexits = set()
-                idc.MakeNameEx(hs[i], '_loop_%x' % (i+1), idc.SN_LOCAL)
+
+                # remove the existing name if it is their
+                name = '_loop_%x' % (i+1)
+                old = idaapi.get_name_ea(fn, name)
+                if old in fg.nodes:
+                  idc.MakeNameEx(old, '', idc.SN_LOCAL)
+                # name it
+                idc.MakeNameEx(hs[i], name, idc.SN_LOCAL)
+
                 lns = set(algorithms.loop_nodes(fg, hs[i], ds))
                 for j in lns:
                     for k in fg.nodes[j].outgoing:
@@ -180,4 +181,8 @@ class FunctionGraph(directed.DirectedGraph):
                             lexits.add(k)
                 lexits = list(lexits)
                 for j in range(len(lexits)):
-                    idc.MakeNameEx(lexits[j], '_loop_%x_exit_%x' % (i+1,j+1), idc.SN_LOCAL)
+                  name = '_loop_%x_exit_%x' % (i+1, j+1)
+                  old = idaapi.get_name_ea(fn, name)
+                  if old in fg.nodes:
+                    idc.MakeNameEx(old, '', idc.SN_LOCAL)
+                  idc.MakeNameEx(lexits[j], name, idc.SN_LOCAL)

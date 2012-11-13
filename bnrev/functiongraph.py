@@ -29,7 +29,8 @@ class FunctionGraph(directed.DirectedGraph):
 
             refs = set(filter(lambda x: x <= end_addr and x >= start_addr, idautils.CodeRefsFrom(h,1)))
             nh = idc.NextHead(h, end_addr)
-            if nh != idc.BADADDR and idc.isFlow(nh):
+            if nh != idc.BADADDR and \
+              (idaapi.isFlow(idaapi.get_flags_ex(nh,0)) or idaapi.is_call_insn(h)):
                 refs.add(nh)
 
             for r in refs:
@@ -159,6 +160,16 @@ class FunctionGraph(directed.DirectedGraph):
             dt = algorithms.domtree(ds)
             hs = list(algorithms.loop_headers(fg, ds, fn))
             hs.sort()
+
+            # first remove loop names so we don't have conflicts
+            for i in hs:
+              idc.MakeNameEx(i, "", idc.SN_LOCAL)
+              lns = set(algorithms.loop_nodes(fg, i, ds))
+              for j in lns:
+                  for k in fg.nodes[j].outgoing:
+                      if k not in lns:
+                        idc.MakeNameEx(k, "", idc.SN_LOCAL)
+             
             for i in range(len(hs)):
                 lexits = set()
                 idc.MakeNameEx(hs[i], '_loop_%x' % (i+1), idc.SN_LOCAL)

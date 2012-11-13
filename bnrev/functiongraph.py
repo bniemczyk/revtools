@@ -9,7 +9,14 @@ class FunctionGraph(directed.DirectedGraph):
         import idaapi
         super(FunctionGraph, self).__init__()
 
-        start_addr = idc.LocByName(functionName) if type(functionName) == type('str') else functionName
+        start_addr = 0
+        if type(functionName) == type('str'):
+          start_addr = idc.LocByName(functionName)
+        else:
+          start_addr = idaapi.get_func(functionName).startEA
+          print 'using 0x%x as function start' % (start_addr)
+
+        #start_addr = idc.LocByName(functionName) if type(functionName) == type('str') else functionName
         end_addr = idc.FindFuncEnd(start_addr)
 
         self.start_addr = start_addr

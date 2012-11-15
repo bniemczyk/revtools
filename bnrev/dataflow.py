@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-#import sympy
+import symbolic
 
 from idafun import *
 
@@ -11,14 +11,14 @@ def resolve_op(ist, opnum):
   os = op_size(o)
 
   if o.type == idaapi.o_reg:
-    return sympy.symbols(idaapi.get_reg_name(o.reg, 32))
+    return symbolic.symbols(idaapi.get_reg_name(o.reg, 4))
 
   if o.type == idaapi.o_imm:
-    return sympy.sympify(o.value)
+    return symbolic.symbolic(o.value)
 
   if o.type == idaapi.o_displ:
-    rv = sympy.symbols(idaapi.get_reg_name(o.phrase, 32))
-    if o.specflag1 != 0:
-      rv = rv + sympy.symbols(idaapi.get_reg_name(o.specflag2, 32))
+    rv = symbolic.symbols(idaapi.get_reg_name(o.phrase, 4))
+    #if o.specflag1 != 0:
+    #  rv = rv + symbolic.symbols(idaapi.get_reg_name(o.specflag2, 4))
     rv = rv + (o.addr if o.addr < 2**31 else 2**32 - o.addr)
     return rv

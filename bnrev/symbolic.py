@@ -33,6 +33,9 @@ class _Symbolic(tuple):
   def __ne__(self, other):
     return not self.__eq__(other)
 
+  def __hash__(self):
+    return id(self)
+
   def __getitem__(self, num):
     raise "getitem not supported"
 
@@ -161,27 +164,27 @@ class Number(_Symbolic):
       other = symbolic(other)
 
     if isinstance(other, Number):
-      return symbolic(self.n.__or__(other.n))
+      return symbolic(int(self.n).__or__(int(other.n)))
 
-    return symbolic(other.__ror__(self.n))
+    return symbolic(int(other.n).__ror__(int(self.n)))
 
   def __and__(self, other):
     if not isinstance(other, Number):
       other = symbolic(other)
 
     if isinstance(other, Number):
-      return symbolic(self.n.__and__(other.n))
+      return symbolic(int(self.n).__and__(int(other.n)))
 
-    return symbolic(other.__rand__(self.n))
+    return symbolic(int(other.n).__rand__(int(self.n)))
 
   def __xor__(self, other):
     if not isinstance(other, Number):
       other = symbolic(other)
 
     if isinstance(other, Number):
-      return symbolic(self.n.__xor__(other.n))
+      return symbolic(int(self.n).__xor__(int(other.n)))
 
-    return symbolic(other.__rxor__(self.n))
+    return symbolic(int(other.n).__rxor__(int(self.n)))
 
   def __rmul__(self, other):
     if not isinstance(other, Number):
@@ -224,27 +227,27 @@ class Number(_Symbolic):
       other = symbolic(other)
 
     if isinstance(other, Number):
-      return symbolic(self.n.__ror__(other.n))
+      return symbolic(int(self.n).__ror__(int(other.n)))
 
-    return symbolic(other.__or__(self.n))
+    return symbolic(int(other.n).__or__(int(self.n)))
 
   def __rand__(self, other):
     if not isinstance(other, Number):
       other = symbolic(other)
 
     if isinstance(other, Number):
-      return symbolic(self.n.__rand__(other.n))
+      return symbolic(int(self.n).__rand__(int(other.n)))
 
-    return symbolic(other.__and__(self.n))
+    return symbolic(int(other.n).__and__(int(self.n)))
 
   def __rxor__(self, other):
     if not isinstance(other, Number):
       other = symbolic(other)
 
     if isinstance(other, Number):
-      return symbolic(self.n.__rxor__(other.n))
+      return symbolic(int(self.n).__rxor__(int(other.n)))
 
-    return symbolic(other.__xor__(self.n))
+    return symbolic(int(other.n).__xor__(int(self.n)))
 
 class Wild(_Symbolic):
   '''
@@ -291,11 +294,19 @@ class Fn(_Symbolic):
     valid keyword args:
       commutative (default False) - order of operands is unimportant
     '''
+    args = map(symbolic, args)
+
     if len(args) == 2 and 'numeric' in kargs:
-      x = symbolic(args[0])
-      y = symbolic(args[1])
+      x = args[0]
+      y = args[1]
       if isinstance(x, Number) and isinstance(y, Number):
-        return symbolic(getattr(x.n, kargs['numeric'])(y.n))
+        if 'cast' in kargs and kargs['cast'] != None:
+          x = kargs['cast'](x.n)
+          y = kargs['cast'](y.n)
+        else:
+          x = x.n
+          y = y.n
+        return symbolic(getattr(x, kargs['numeric'])(y))
 
     if not isinstance(fn, _Symbolic):
       fn = symbolic(fn, **kargs)
@@ -321,13 +332,16 @@ class Fn(_Symbolic):
       ridentity = kargs['ridentity'] if 'ridentity' in kargs else kargs['identity'] if 'identity' in kargs else None
       lidentity = kargs['lidentity'] if 'lidentity' in kargs else kargs['identity'] if 'identity' in kargs else None
 
-      if lidentity != None and symbolic(args[0]) == symbolic(lidentity):
-        print 'simplifying %s(%s, %s)' % (fn, symbolic(args[0]), symbolic(args[1]))
-        return symbolic(args[1])
+      if lidentity != None and args[0] == lidentity:
+        print 'simplifying %s(%s, %s)' % (fn, args[0], args[1])
+        return args[1]
 
-      if ridentity != None and symbolic(args[1]) == symbolic(ridentity):
-        print 'simplifying %s(%s, %s)' % (fn, symbolic(args[0]), symbolic(args[1]))
-        return symbolic(args[0])
+      if ridentity != None and args[1] == ridentity:
+        print 'simplifying %s(%s, %s)' % (fn, args[0], args[1])
+        return args[0]
+
+    if 'zero' in kargs and kargs['zero'] in args:
+      return kargs['zero']
 
     # if it's commutative, order the args in canonical order and call __new__ with that
     if 'commutative' in kargs and kargs['commutative']:
@@ -338,7 +352,7 @@ class Fn(_Symbolic):
 
     self.name = fn.name
     self.fn = fn
-    self.args = tuple(map(symbolic, args))
+    self.args = args
     self.kargs = HashableDict(kargs)
 
     return self._canonicalize()
@@ -428,27 +442,27 @@ class Fn(_Symbolic):
 
   @staticmethod
   def Mul(lhs, rhs, **kargs):
-    return Fn(symbolic('*', **kargs), lhs, rhs, identity=symbolic(1), numeric='__mul__', **kargs)
+    return Fn(symbolic('*', **kargs), lhs, rhs, zero=symbolic(0), identity=symbolic(1), numeric='__mul__', **kargs)
 
   @staticmethod
   def RShift(lhs, rhs, **kargs):
-    return Fn(symbolic('<<', **kargs), lhs, rhs, ridentity=symbolic(0), numeric='__rshift__', **kargs)
+    return Fn(symbolic('<<', **kargs), lhs, rhs, cast=int, ridentity=symbolic(0), numeric='__rshift__', **kargs)
 
   @staticmethod
   def LShift(lhs, rhs, **kargs):
-    return Fn(symbolic('>>', **kargs), lhs, rhs, ridentity=symbolic(0), numeric='__lshift__', **kargs)
+    return Fn(symbolic('>>', **kargs), lhs, rhs, cast=int, ridentity=symbolic(0), numeric='__lshift__', **kargs)
 
   @staticmethod
   def BitAnd(lhs, rhs, **kargs):
-    return Fn(symbolic('&', **kargs), lhs, rhs, numeric='__and__', **kargs)
+    return Fn(symbolic('&', **kargs), lhs, rhs, cast=int, zero=symbolic(0), numeric='__and__', **kargs)
 
   @staticmethod
   def BitOr(lhs, rhs, **kargs):
-    return Fn(symbolic('|', **kargs), lhs, rhs, identity=symbolic(0), numeric='__or__', **kargs)
+    return Fn(symbolic('|', **kargs), lhs, rhs, cast=int, identity=symbolic(0), numeric='__or__', **kargs)
 
   @staticmethod
   def BitXor(lhs, rhs, **kargs):
-    return Fn(symbolic('^', **kargs), lhs, rhs, identity=symbolic(0), numeric='__xor__', **kargs)
+    return Fn(symbolic('^', **kargs), lhs, rhs, cast=int, identity=symbolic(0), numeric='__xor__', **kargs)
 
   def __str__(self):
     if not self.name[0].isalnum() and len(self.args) == 2:

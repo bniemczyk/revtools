@@ -33,6 +33,9 @@ class _Symbolic(tuple):
   def __ne__(self, other):
     return not self.__eq__(other)
 
+  def __getitem__(self, num):
+    raise "getitem not supported"
+
   # arithmetic overrides
   def __mul__(self, other, commutative=True, associative=True):
     return Fn.Mul(self, other, commutative=commutative, associative=associative)
@@ -338,10 +341,13 @@ class Fn(_Symbolic):
     self.args = tuple(map(symbolic, args))
     self.kargs = HashableDict(kargs)
 
-    if not 'canonicalize' in kargs or kargs['canonicalize']:
-      self = self._canonicalize()
+    return self._canonicalize()
 
-    return self
+  def __getitem__(self, n):
+    if n == 0:
+      return self.fn
+
+    return self.args[n - 1]
 
   def _get_assoc_arguments(self):
     rv = []
@@ -368,6 +374,10 @@ class Fn(_Symbolic):
     return rv
 
   def _canonicalize(self):
+    if 'canonicalize' in self.kargs and not self.kargs['canonicalize']:
+      return self
+
+    print 'canonicalizing %s' % (self,)
 
     # canonicalize the arguments first
     args = list(map(lambda x: x._canonicalize(), self.args))

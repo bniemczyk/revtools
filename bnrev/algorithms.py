@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import memoize
 
 def graph_string(graph):
     rv = []
@@ -39,6 +40,40 @@ def walk_edges(graph, src, direction='outgoing'):
                 if i not in seen:
                     seen.add(i)
                     q.append(i)
+
+def dataflow(graph, src, get_data_transfers):
+  '''
+  returns a dictionary of dictionries
+      ie. rv[node][data] = set([sources])
+
+  params:
+    graph: graph
+    src: entry node
+    get_data_transfers: function that takes a node and returns a collection of transfer tuples
+  '''
+  domset = dominate_sets(graph, src)
+
+  # memoize the transfers
+  get_data_transfers = memoize.Memoize(get_data_transfers)
+
+  rv = {}
+
+  for s,d in walk_edges(graph, src):
+    # loops fuck us all up
+    if s in domset[d]:
+      continue
+
+    if s not in rv:
+      rv[s] = {}
+
+    if d not in rv:
+      rv[d] = {}
+
+    for ds, dd in get_data_transfers(src):
+      rv[s].setdefault(dd, set()).add(ds)
+
+    for k in rv[s]:
+      rv[d].setdefault(k, set()).update(rv[s][k])
 
 def childgraph(graph, src, direction='outgoing'):
     import copy

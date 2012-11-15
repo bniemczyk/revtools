@@ -102,6 +102,9 @@ class Boolean(int):
 
 class Number(_Symbolic):
 
+  IFORMAT = str
+  FFORMAT = str
+
   @Memoize
   def __new__(typ, n):
     n = float(n)
@@ -112,9 +115,9 @@ class Number(_Symbolic):
 
   def __str__(self):
     if self.n.is_integer():
-      return str(int(self.n))
+      return Number.IFORMAT(int(self.n))
     else:
-      return str(self.n)
+      return Number.FFORMAT(self.n)
 
   def __repr__(self):
     return str(self)
@@ -390,8 +393,6 @@ class Fn(_Symbolic):
   def _canonicalize(self):
     if 'canonicalize' in self.kargs and not self.kargs['canonicalize']:
       return self
-
-    print 'canonicalizing %s' % (self,)
 
     # canonicalize the arguments first
     args = list(map(lambda x: x._canonicalize(), self.args))

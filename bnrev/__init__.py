@@ -4,7 +4,10 @@ from algorithms import *
 import algorithms
 import directed
 import memoize
-#import fuzzy
+import symbolic
+
+from symbolic import symbols, symbolic, wilds, Number
+Number.IFORMAT = hex
 
 try:
     from callgraph import *

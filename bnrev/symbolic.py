@@ -27,6 +27,17 @@ class _Symbolic(tuple):
     '''
     return self
 
+  def substitute(self, subs):
+    '''
+    takes a dictionary of substitutions
+    returns itself with substitutions made
+    '''
+
+    if self in subs:
+      return subs[self]
+
+    return self
+
   def __eq__(self, other):
     return id(self) == id(other)
 
@@ -256,6 +267,9 @@ class Wild(_Symbolic):
   '''
   wilds will not be equal even if they have the same name
   but the same *instance* will be equal to itself
+
+  the main part of this is for substituting patterns -
+   this is not implemented yet
   '''
 
   def __new__(typ, name, **kargs):
@@ -359,6 +373,15 @@ class Fn(_Symbolic):
     self.kargs = HashableDict(kargs)
 
     return self._canonicalize()
+
+  def substitute(self, subs):
+    args = list(map(lambda x: x.substitute(subs), self.args))
+    self = Fn(self.fn, *args, **self.kargs)
+
+    if isinstance(self, Fn):
+      return super(Fn, self).substitute(subs)
+    else:
+      return self.substitute(subs)
 
   def __getitem__(self, n):
     if n == 0:

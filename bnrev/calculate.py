@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import distorm3
 import symbolic
 import copy
 import memoize
@@ -9,32 +10,66 @@ from functiongraph import FunctionGraph
 
 from idafun import *
 
+# registers
 eax,ebx,ecx,edx,esi,edi,ebp,esp = symbolic.symbols('eax ebx ecx edx esi edi ebp esp')
+ax,bx,cx,dx,si,di,bp,sp = symbolic.symbols('ax bx cx dx si di bp sp')
+al,ah,bl,bh,cl,ch,dl,dh = symbolic.symbols('al ah bl bh cl ch dl dh')
+
+# functions
 DEREF = symbolic.symbols('DEREF')
 PHI = symbolic.symbols('PHI', associative=True, commutative=True)
+AT = symbolic.symbols('@')
+CALL = symbolic.symbols('CALL')
+LOOKUP = symbolic.symbols('=>')
+
+regmasks = \
+    {
+    ax: eax & 0xffff,
+    bx: ebx & 0xffff,
+    cx: ecx & 0xffff,
+    dx: edx & 0xffff,
+    si: esi & 0xffff,
+    di: edi & 0xffff,
+    bp: ebp & 0xffff,
+    sp: esp & 0xffff,
+
+    al: eax & 0xff,
+    ah: eax & 0xff00,
+    bl: ebx & 0xff,
+    bh: ebx & 0xff00,
+    cl: ecx & 0xff,
+    ch: ecx & 0xff00,
+    dl: edx & 0xff,
+    dh: edx & 0xff00
+    }
+
+def _invert_mask(mask):
+  return 0xffffffff ^ mask
 
 def resolve_op(ist, opnum):
-  o = ist[opnum]
-  os = op_size(o)
+  op = ist.operands[opnum]
 
-  if o.type == idaapi.o_reg:
-    return symbolic.symbols(idaapi.get_reg_name(o.reg, 4))
+  if op.type == 'AbsoluteMemory':
+    rv = 0   
+    if op.index != None:
+      rv += symbolic.symbols(distorm3.Registers[op.index].lower()) * op.scale
+    if op.base != None:
+      rv += symbolic.symbols(distorm3.Registers[op.base].lower())
+    if op.disp != None:
+      rv += op.disp
+    return DEREF(rv) if ist.mnemonic.lower() != 'lea' else rv
 
-  if o.type == idaapi.o_imm:
-    return symbolic.symbolic(o.value)
+  elif op.type == 'Register':
+    return symbolic.symbols(distorm3.Registers[op.index].lower())
 
-  if o.type in set([idaapi.o_displ, idaapi.o_phrase]):
-    rv = symbolic.symbols(idaapi.get_reg_name(o.phrase, 4))
-    #FIXME: does not handle [reg+reg*mult+offset]
-    #if o.specflag1 != 0:
-    #  rv = rv + symbolic.symbols(idaapi.get_reg_name(o.specflag2, 4))
-    rv = rv + (o.addr if o.addr < 2**31 else -(2**32 - o.addr))
-    if ist.itype != idaapi.NN_lea:
-      rv = DEREF(rv)
-    return rv
+  elif op.type == 'Immediate':
+    return symbolic.symbolic(op.value)
 
-  if o.type in set([idaapi.o_near, idaapi.o_far]):
-    return symbolic.symbolic(o.addr)
+  elif op.type == 'AbsoluteMemoryAddress':
+    return DEREF(op.disp)
+
+  else:
+    raise BaseException("Unknown Operand Type %s" % (op.type))
 
 def phi(src1, src2):
   if src1 == src2:
@@ -77,45 +112,75 @@ def calc(addr=None, graph=None):
     loop_headers = algorithms.loop_headers(graph, ds, graph.start_addr)
     known = {}
 
+    def _replace(exp):
+      while exp in known and known[exp] != exp:
+        exp = known[exp]
+      return exp
+
     if addr not in loop_headers:
       for i in graph.nodes[addr].incoming:
         results = calc(i, graph)
         known = _combine_dicts(known, results)
 
-    ist = idautils.DecodeInstruction(addr)
+    ist = decode(addr)
+
+    def _set(dst, src):
+      if src in regmasks:
+        src = regmasks[src]
+
+      if dst in regmasks:
+        known[dst] = (dst & _invert_mask(regmasks[dst])) | src
+      else:
+        known[dst] = src
 
     def _dstsrc(istn, fnc):
-      if ist.itype == istn:
+      if ist.mnemonic.lower() == istn:
         dst,src = _resolve_ops(ist, 2)
         if _is_deref(dst):
-          dst = dst.substitute(known)
-        known[dst] = fnc(dst.substitute(known), src.substitute(known))
+          dst = _replace(dst)
+        _set(dst, fnc(_replace(dst), src.substitute(known)))
 
     # arithmetic
-    _dstsrc(idaapi.NN_add, lambda dst, src: dst + src)
-    _dstsrc(idaapi.NN_sub, lambda dst, src: dst - src)
-    _dstsrc(idaapi.NN_mul, lambda dst, src: dst * src)
-    _dstsrc(idaapi.NN_div, lambda dst, src: dst / src)
-    _dstsrc(idaapi.NN_xor, lambda dst, src: dst ^ src)
-    _dstsrc(idaapi.NN_or, lambda dst, src: dst | src)
-    _dstsrc(idaapi.NN_and, lambda dst, src: dst & src)
+    _dstsrc('add', lambda dst, src: dst + src)
+    _dstsrc('sub', lambda dst, src: dst - src)
+    _dstsrc('mul', lambda dst, src: dst * src)
+    _dstsrc('div', lambda dst, src: dst / src)
+    _dstsrc('xor', lambda dst, src: dst ^ src)
+    _dstsrc('or', lambda dst, src: dst | src)
+    _dstsrc('and', lambda dst, src: dst & src)
 
     # mov instructions
-    _dstsrc(idaapi.NN_lea, lambda dst, src: src) # resolve_op is smart enough to not DEREF lea's
-    _dstsrc(idaapi.NN_mov, lambda dst, src: src)
-    _dstsrc(idaapi.NN_movsx, lambda dst, src: src)
-    _dstsrc(idaapi.NN_movzx, lambda dst, src: src)
+    _dstsrc('lea', lambda dst, src: src) # resolve_op is smart enough to not DEREF lea's
+    _dstsrc('mov', lambda dst, src: src)
+    _dstsrc('movsx', lambda dst, src: src)
+    _dstsrc('movzx', lambda dst, src: src)
 
     # stack manipulations instructions
     def _stack(istn, offset, dst=None, src=None):
-      if ist.itype == istn:
-        pesp = esp.substitute(known)
-        known[esp] = (pesp + offset).substitute(known)
+      if ist.mnemonic.lower() == istn:
+        pesp = _replace(esp)
+        _set(esp, pesp + offset)
 
         if src != None:
-          known[DEREF(pesp+offset)] = src().substitute(known)
+          _set(DEREF(pesp+offset), src().substitute(known))
 
-    _stack(idaapi.NN_push, -4, src=lambda: _resolve_ops(ist, 1))
-    _stack(idaapi.NN_pop, 4, dst=lambda: _resolve_ops(ist, 1))
+        if dst != None:
+          _set(dst(), _replace(DEREF(pesp)))
+
+    _stack('push', -4, src=lambda: _resolve_ops(ist, 1))
+    _stack('pop', 4, dst=lambda: _resolve_ops(ist, 1))
+
+    # function calls
+    if ist.mnemonic.lower() == 'call': 
+      fn = _resolve_ops(ist, 1)
+      if isinstance(fn, symbolic.Number):
+        fn_name = idc.GetFunctionName(int(fn.n))
+        if fn_name != '':
+          fn = fn_name
+
+
+      known[eax] = LOOKUP(AT(CALL(fn), ist.address), eax)
+      known[ebx] = LOOKUP(AT(CALL(fn), ist.address), ebx)
+      known[ecx] = LOOKUP(AT(CALL(fn), ist.address), ecx)
 
     return known

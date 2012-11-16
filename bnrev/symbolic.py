@@ -2,6 +2,7 @@
 # this only exists because sympy crashes IDAPython
 # for general use sympy is much more complete
 
+import traceback
 from memoize import Memoize
 import types
 import copy
@@ -33,8 +34,8 @@ class _Symbolic(tuple):
     returns itself with substitutions made
     '''
 
-    if self in subs:
-      return subs[self]
+    while self in subs:
+      self = subs[self]
 
     return self
 
@@ -60,7 +61,7 @@ class _Symbolic(tuple):
   def __add__(self, other, commutative=True, associative=True):
     return Fn.Add(self, other, commutative=commutative, associative=associative)
 
-  def __sub__(self, other, commutative=False, associative=False):
+  def __sub__(self, other, commutative=True, associative=True):
     return Fn.Sub(self, other, commutative=commutative, associative=associative)
 
   def __or__(self, other, commutative=True, associative=True):
@@ -370,6 +371,10 @@ class Fn(_Symbolic):
     self.args = args
     self.kargs = HashableDict(kargs)
 
+    if self.fn.name == '+' and not self.kargs['associative']:
+      print 'NON ASSOC ADDITION'
+      traceback.print_stack()
+
     return self._canonicalize()
 
   def substitute(self, subs):
@@ -456,7 +461,8 @@ class Fn(_Symbolic):
 
   @staticmethod
   def Sub(lhs, rhs, **kargs):
-    return Fn(symbolic('-', **kargs), lhs, rhs, identity=symbolic(0), numeric='__sub__', **kargs)
+    #return Fn(symbolic('-', **kargs), lhs, rhs, identity=symbolic(0), numeric='__sub__', **kargs)
+    return Fn.Add(lhs, -rhs, **kargs)
 
   @staticmethod
   def Div(lhs, rhs, **kargs):
@@ -484,6 +490,8 @@ class Fn(_Symbolic):
 
   @staticmethod
   def BitXor(lhs, rhs, **kargs):
+    if lhs == rhs:
+      return symbolic(0)
     return Fn(symbolic('^', **kargs), lhs, rhs, cast=int, identity=symbolic(0), numeric='__xor__', **kargs)
 
   def __str__(self):

@@ -9,6 +9,8 @@ import symbolic
 from symbolic import symbols, symbolic, wilds, Number
 Number.IFORMAT = hex
 
+from calculate import *
+
 try:
     from callgraph import *
     from functiongraph import *

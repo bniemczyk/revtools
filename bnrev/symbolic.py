@@ -350,11 +350,9 @@ class Fn(_Symbolic):
       lidentity = kargs['lidentity'] if 'lidentity' in kargs else kargs['identity'] if 'identity' in kargs else None
 
       if lidentity != None and args[0] == lidentity:
-        print 'simplifying %s(%s, %s)' % (fn, args[0], args[1])
         return args[1]
 
       if ridentity != None and args[1] == ridentity:
-        print 'simplifying %s(%s, %s)' % (fn, args[0], args[1])
         return args[0]
 
     if 'zero' in kargs and kargs['zero'] in args:
@@ -497,18 +495,18 @@ class Fn(_Symbolic):
   def __repr__(self):
     return str(self)
 
-def symbols(symstr):
+def symbols(symstr, **kargs):
   '''
   takes a string of symbols seperated by whitespace
   returns a tuple of symbols
   '''
   syms = symstr.split(' ')
   if len(syms) == 1:
-    return Symbol(syms[0])
+    return Symbol(syms[0], **kargs)
 
   rv = []
   for i in syms:
-    rv.append(Symbol(i))
+    rv.append(Symbol(i, **kargs))
 
   return tuple(rv)
 

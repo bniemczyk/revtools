@@ -23,4 +23,11 @@ def decode(ea):
   _bytes = map(lambda x: chr(idc.Byte(ea+x)), range(ist.size))
   _bytes = ''.join(_bytes)
 
-  return distorm3.Decompose(ea, _bytes)[0]
+  ist = distorm3.Decompose(ea, _bytes)[0]
+
+  # distorm doesn't decode the operand logical size ie.. byte ptr, so use IDA for that
+  for i in range(len(ist.operands)):
+    idaop = idautils.DecodeInstruction(ist.address)[i]
+    setattr(ist.operands[i], 'op_size', op_size(idaop))
+
+  return ist

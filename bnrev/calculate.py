@@ -51,13 +51,15 @@ def resolve_op(ist, opnum):
 
   if op.type == 'AbsoluteMemory':
     rv = 0   
+    idaist = idautils.DecodeInstruction(ist.address)
+
     if op.index != None:
       rv += symbolic.symbols(distorm3.Registers[op.index].lower()) * op.scale
     if op.base != None:
       rv += symbolic.symbols(distorm3.Registers[op.base].lower())
     if op.disp != None:
       rv += op.disp
-    return DEREF(rv) if ist.mnemonic.lower() != 'lea' else rv
+    return DEREF(op.op_size, rv) if ist.mnemonic.lower() != 'lea' else rv
 
   elif op.type == 'Register':
     return symbolic.symbols(distorm3.Registers[op.index].lower())
@@ -66,7 +68,7 @@ def resolve_op(ist, opnum):
     return symbolic.symbolic(op.value)
 
   elif op.type == 'AbsoluteMemoryAddress':
-    return DEREF(op.disp)
+    return DEREF(op.op_size, op.disp)
 
   else:
     raise BaseException("Unknown Operand Type %s" % (op.type))
@@ -124,21 +126,32 @@ def calc(addr=None, graph=None):
 
     ist = decode(addr)
 
-    def _set(dst, src):
+    def _set(dst, src, extend=False):
       if src in regmasks:
-        src = regmasks[src]
+        print known
+        print 'src: %s' % (src,)
+        mask = regmasks[src][1]
+        src = regmasks[src][2]
+        src = (src & mask).substitute(known)
+        print 'src: %s' % (src,)
+      else:
+        src = src.substitute(known)
 
       if dst in regmasks:
-        known[dst] = (dst & _invert_mask(regmasks[dst])) | src
+        mask = regmasks[dst][1]
+        dst = regmasks[dst][2]
+        mask = _invert_mask(mask)
+        known[dst] = ((dst & mask) | src)        
+
       else:
         known[dst] = src
 
-    def _dstsrc(istn, fnc):
+    def _dstsrc(istn, fnc, extend=False):
       if ist.mnemonic.lower() == istn:
         dst,src = _resolve_ops(ist, 2)
         if _is_deref(dst):
-          dst = _replace(dst)
-        _set(dst, fnc(_replace(dst), src.substitute(known)))
+          dst = dst
+        _set(dst, fnc(dst, src), extend=extend)
 
     # arithmetic
     _dstsrc('add', lambda dst, src: dst + src)
@@ -152,8 +165,8 @@ def calc(addr=None, graph=None):
     # mov instructions
     _dstsrc('lea', lambda dst, src: src) # resolve_op is smart enough to not DEREF lea's
     _dstsrc('mov', lambda dst, src: src)
-    _dstsrc('movsx', lambda dst, src: src)
-    _dstsrc('movzx', lambda dst, src: src)
+    _dstsrc('movsx', lambda dst, src: src, extend=True)
+    _dstsrc('movzx', lambda dst, src: src, extend=True)
 
     # stack manipulations instructions
     def _stack(istn, offset, dst=None, src=None):
@@ -162,10 +175,10 @@ def calc(addr=None, graph=None):
         _set(esp, pesp + offset)
 
         if src != None:
-          _set(DEREF(pesp+offset), src().substitute(known))
+          _set(DEREF(ist.operands[0].op_size, pesp+offset), src())
 
         if dst != None:
-          _set(dst(), _replace(DEREF(pesp)))
+          _set(dst(), _replace(DEREF(ist.operands[0].op_size, pesp)))
 
     _stack('push', -4, src=lambda: _resolve_ops(ist, 1))
     _stack('pop', 4, dst=lambda: _resolve_ops(ist, 1))

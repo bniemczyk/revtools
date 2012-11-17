@@ -33,8 +33,7 @@ class _Symbolic(tuple):
     takes a dictionary of substitutions
     returns itself with substitutions made
     '''
-
-    while self in subs:
+    if self in subs:
       self = subs[self]
 
     return self
@@ -49,7 +48,13 @@ class _Symbolic(tuple):
     return id(self)
 
   def __getitem__(self, num):
-    raise "getitem not supported"
+    if num == 0:
+      return self
+
+    raise BaseException("Invalid index")
+
+  def __len__(self):
+    return 1
 
   # arithmetic overrides
   def __mul__(self, other, commutative=True, associative=True):
@@ -181,7 +186,7 @@ class Number(_Symbolic):
     if isinstance(other, Number):
       return symbolic(int(self.n).__or__(int(other.n)))
 
-    return symbolic(int(other.n).__ror__(int(self.n)))
+    return other.__ror__(self)
 
   def __and__(self, other):
     if not isinstance(other, Number):
@@ -260,9 +265,9 @@ class Number(_Symbolic):
       other = symbolic(other)
 
     if isinstance(other, Number):
-      return symbolic(int(self.n).__rxor__(int(other.n)))
+      return symbolic(int(self.n) ^ int(other.n))
 
-    return symbolic(int(other.n).__xor__(int(self.n)))
+    return symbolic(int(other.n) ^ int(self.n))
 
 class Wild(_Symbolic):
   '''
@@ -381,16 +386,19 @@ class Fn(_Symbolic):
     args = list(map(lambda x: x.substitute(subs), self.args))
     self = Fn(self.fn, *args, **self.kargs)
 
-    if isinstance(self, Fn):
-      return super(Fn, self).substitute(subs)
-    else:
-      return self.substitute(subs)
+    if self in subs:
+      self = subs[self]
+
+    return self
 
   def __getitem__(self, n):
     if n == 0:
       return self.fn
 
     return self.args[n - 1]
+
+  def __len__(self):
+    return len(self.args) + 1
 
   def _get_assoc_arguments(self):
     rv = []
@@ -546,7 +554,8 @@ def symbolic(obj, **kargs):
   elif isinstance(obj, _Symbolic):
     return obj
   else:
-    raise "Unknown type passed to symbolic"
+    msg = "Unknown type (%s) %s passed to symbolic" % (type(obj), obj)
+    raise BaseException(msg)
 
 # for compatibility
 def sympify(obj):

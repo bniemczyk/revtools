@@ -2,12 +2,8 @@
 
 class HashableDict(dict):
 
-  def __hash__(self):
-    h = 0
-    for k in self:
-      h += hash((k, self[k]))
-
-    return h
+  def __hash__(self, seen=None):
+    return 0
 
   def __eq__(self, other):
     for k in self:

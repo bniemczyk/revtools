@@ -126,14 +126,26 @@ def calc(addr=None, graph=None):
 
     ist = decode(addr)
 
+    def _cleanup_derefs(exp):
+      if exp[0].name == '&' and exp[2][0] == DEREF:
+        if exp[1] == symbolic.symbolic(0xff) and exp[2][1] == symbolic.symbolic(0x1):
+          return exp[2]
+        if exp[1] == symbolic.symbolic(0xffff) and exp[2][1] == symbolic.symbolic(0x2):
+          return exp[2]
+        if exp[1] == symbolic.symbolic(0xffffffff) and exp[2][1] == symbolic.symbolic(0x4):
+          return exp[2]
+
+      return exp
+
     def _set(dst, src, extend=False):
+
+      if dst[0] == DEREF:
+        dst = dst.substitute(known)
+
       if src in regmasks:
-        print known
-        print 'src: %s' % (src,)
         mask = regmasks[src][1]
         src = regmasks[src][2]
         src = (src & mask).substitute(known)
-        print 'src: %s' % (src,)
       else:
         src = src.substitute(known)
 
@@ -141,17 +153,20 @@ def calc(addr=None, graph=None):
         mask = regmasks[dst][1]
         dst = regmasks[dst][2]
         mask = _invert_mask(mask)
-        known[dst] = ((dst & mask) | src)        
+        known[dst] = ((dst & mask) | src).walk(_cleanup_derefs)
 
       else:
-        known[dst] = src
+        known[dst] = src.walk(_cleanup_derefs)
 
     def _dstsrc(istn, fnc, extend=False):
       if ist.mnemonic.lower() == istn:
         dst,src = _resolve_ops(ist, 2)
-        if _is_deref(dst):
-          dst = dst
         _set(dst, fnc(dst, src), extend=extend)
+
+    def _oneop(istn, fnc):
+      if ist.mnemonic.lower() == istn:
+        x = _resolve_ops(ist, 1)
+        _set(x, fnc(x))
 
     # arithmetic
     _dstsrc('add', lambda dst, src: dst + src)
@@ -161,6 +176,8 @@ def calc(addr=None, graph=None):
     _dstsrc('xor', lambda dst, src: dst ^ src)
     _dstsrc('or', lambda dst, src: dst | src)
     _dstsrc('and', lambda dst, src: dst & src)
+    _oneop('inc', lambda x: x + 1)
+    _oneop('dec', lambda x: x - 1)
 
     # mov instructions
     _dstsrc('lea', lambda dst, src: src) # resolve_op is smart enough to not DEREF lea's
@@ -171,14 +188,15 @@ def calc(addr=None, graph=None):
     # stack manipulations instructions
     def _stack(istn, offset, dst=None, src=None):
       if ist.mnemonic.lower() == istn:
-        pesp = _replace(esp)
-        _set(esp, pesp + offset)
+        pesp = esp if esp not in known else known[esp]
 
         if src != None:
-          _set(DEREF(ist.operands[0].op_size, pesp+offset), src())
+          known[DEREF(ist.operands[0].op_size, pesp+offset)] = src().substitute(known).walk(_cleanup_derefs)
 
         if dst != None:
-          _set(dst(), _replace(DEREF(ist.operands[0].op_size, pesp)))
+          known[dst] = DEREF(ist.operands[0].op_size, pesp)
+
+        known[esp] = pesp+offset
 
     _stack('push', -4, src=lambda: _resolve_ops(ist, 1))
     _stack('pop', 4, dst=lambda: _resolve_ops(ist, 1))
@@ -193,7 +211,8 @@ def calc(addr=None, graph=None):
 
 
       known[eax] = LOOKUP(AT(CALL(fn), ist.address), eax)
-      known[ebx] = LOOKUP(AT(CALL(fn), ist.address), ebx)
       known[ecx] = LOOKUP(AT(CALL(fn), ist.address), ecx)
+      known[edx] = LOOKUP(AT(CALL(fn), ist.address), edx)
+      known[esp] = known[esp] + idc.GetSpDiff(ist.address+ist.size)
 
     return known

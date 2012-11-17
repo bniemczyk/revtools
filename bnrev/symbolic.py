@@ -8,6 +8,43 @@ import types
 import copy
 from hashable import HashableDict
 
+def _distribute(op1, op2, exp):
+  '''
+  TODO:
+    will failed if op2/op1 are seen but do not have 2 operands
+
+    FIXME: this can be change by specifying the order to walk
+     but walk will need to be updated
+    cannot use walk because it needs to distribute *before*
+    running on the children
+  '''
+  if exp[0].name == op1.name:
+    if exp[2][0].name == op2.name:
+      args = list(map(lambda x: exp[0](exp[1], x), exp[2].args))
+      exp = exp[2][0](*args)
+    elif exp[1][0].name == op2.name:
+      args = list(map(lambda x: exp[0](exp[2], x), exp[1].args))
+      exp = exp[1][0](*args)
+
+  if len(exp) > 1:
+    args = list(map(lambda x: _distribute(op1, op2, x), exp.args))
+    do_change = False
+    for i in range(len(args)):
+      if args[i] != exp.args[i]:
+        do_change = True
+        break
+    if do_change:
+      exp = exp[0](*args, **exp[0].kargs)
+
+  return exp
+
+def _simplify(exp):
+  _and,_or,_mul,_add,_sub = symbols('& | * + -')
+  exp = _distribute(_and, _or, exp)
+  exp = _distribute(_mul, _add, exp)
+  exp = _distribute(_mul, _sub, exp)
+  return exp
+
 def _order(a,b):
   '''
   used internally to put shit in canonical order
@@ -20,6 +57,9 @@ def _order(a,b):
     return -1 if str(a) < str(b) else 0 if str(a) == str(b) else 1
 
 class _Symbolic(tuple):
+
+  def walk(self, fn):
+    return fn(self)
 
   def _canonicalize(self):
     '''
@@ -292,6 +332,8 @@ class Wild(_Symbolic):
     return str(self)
 
   def __call__(self, *args):
+    if 'canonicalize' in self.kargs:
+      del self.kargs['canonicalize']
     return Fn(self, *args, **self.kargs)
 
 class Symbol(Wild):
@@ -380,7 +422,11 @@ class Fn(_Symbolic):
       print 'NON ASSOC ADDITION'
       traceback.print_stack()
 
-    return self._canonicalize()
+    return _simplify(self._canonicalize())._canonicalize()
+
+  def walk(self, fn):
+    args = map(fn, self.args)
+    return fn(self.fn(*args))
 
   def substitute(self, subs):
     args = list(map(lambda x: x.substitute(subs), self.args))

@@ -6,7 +6,7 @@ import directed
 import memoize
 import symbolic
 
-from symbolic import symbols, symbolic, wilds, Number
+from symbolic import symbols, wilds, Number
 Number.IFORMAT = hex
 
 from calculate import *

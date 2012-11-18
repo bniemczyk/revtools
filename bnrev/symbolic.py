@@ -7,6 +7,7 @@ from memoize import Memoize
 import types
 import copy
 from hashable import HashableDict
+import pprint
 
 def _distribute(op1, op2, exp):
   '''
@@ -49,17 +50,25 @@ def _order(a,b):
   '''
   used internally to put shit in canonical order
   '''
-  if(isinstance(a, Number)):
+  if isinstance(a, Number):
     if(isinstance(b, Number)):
-      return -1 if a < b else 0 if a == b else 1
-    return (-1)
+      return -1 if a.n < b.n else (0 if a.n == b.n else 1)
+    return -1
+  if isinstance(b, Number):
+    return 1
   else:
-    return -1 if str(a) < str(b) else 0 if str(a) == str(b) else 1
+    return -1 if str(a) < str(b) else (0 if str(a) == str(b) else 1)
 
 class _Symbolic(tuple):
 
   def walk(self, fn):
     return fn(self)
+
+  def _dump(self):
+    return {
+        'name': self.name,
+        'id': id(self)
+        }
 
   def _canonicalize(self):
     '''
@@ -139,6 +148,18 @@ class _Symbolic(tuple):
   def __rxor__(self, other, commutative=True, associative=False):
     return Fn.BitXor(other, self, commutative=commutative, associative=associative)
 
+  def __shiftr__(self, other, commutative=False, associative=False):
+    return Fn.RShift(self, other, commutative=commutative, associative=associative)
+
+  def __shiftl__(self, other, commutative=False, associative=False):
+    return Fn.LShift(self, other, commutative=commutative, associative=associative)
+
+  def __rshiftr__(self, other, commutative=False, associative=False):
+    return Fn.RShift(other, self, commutative=commutative, associative=associative)
+
+  def __rshiftl__(self, other, commutative=False, associative=False):
+    return Fn.LShift(other, self, commutative=commutative, associative=associative)
+
   def __neg__(self):
     return self * -1
 
@@ -169,6 +190,18 @@ class Number(_Symbolic):
     self.name = str(n)
     self.n = n
     return self
+
+  def __eq__(self, other):
+    if isinstance(other, _Symbolic):
+      return super(Number, self).__eq__(other)
+    else:
+      return self.n == other
+
+  def __ne__(self, other):
+    if isinstance(other, _Symbolic):
+      return super(Number, self).__ne__(other)
+    else:
+      return self.n != other
 
   def __str__(self):
     if self.n.is_integer():
@@ -238,13 +271,28 @@ class Number(_Symbolic):
     return symbolic(int(other.n).__rand__(int(self.n)))
 
   def __xor__(self, other):
-    if not isinstance(other, Number):
-      other = symbolic(other)
+    other = symbolic(other)
 
     if isinstance(other, Number):
       return symbolic(int(self.n).__xor__(int(other.n)))
 
-    return symbolic(int(other.n).__rxor__(int(self.n)))
+    return symbolic(other.__rxor__(int(self.n)))
+
+  def __shiftr__(self, other):
+    other = symbolic(other)
+
+    if isinstance(other, Number):
+      return symbolic(int(self.n) >> int(other.n))
+
+    return symbolic(other.__rshiftr__(self))
+
+  def __shiftl__(self, other):
+    other = symbolic(other)
+
+    if isinstance(other, Number):
+      return symbolic(int(self.n) >> int(other.n))
+
+    return symbolic(other.__rshiftl__(self))
 
   def __rmul__(self, other):
     if not isinstance(other, Number):
@@ -309,6 +357,22 @@ class Number(_Symbolic):
 
     return symbolic(int(other.n) ^ int(self.n))
 
+  def __rshiftr__(self, other):
+    other = symbolic(other)
+
+    if isinstance(other, Number):
+      return symbolic(int(other.n) >> int(self.n))
+
+    return symbolic(other.__shiftr__(self))
+
+  def __rshiftl__(self, other):
+    other = symbolic(other)
+
+    if isinstance(other, Number):
+      return symbolic(int(other.n) >> int(self.n))
+
+    return symbolic(other.__shiftl__(self))
+
 class Wild(_Symbolic):
   '''
   wilds will not be equal even if they have the same name
@@ -321,7 +385,7 @@ class Wild(_Symbolic):
   def __new__(typ, name, **kargs):
     self = _Symbolic.__new__(typ)
     self.name = name
-    self.kargs = HashableDict(kargs)
+    self.kargs = kargs
     self.iswild = True
     return self
 
@@ -332,9 +396,16 @@ class Wild(_Symbolic):
     return str(self)
 
   def __call__(self, *args):
-    if 'canonicalize' in self.kargs:
-      del self.kargs['canonicalize']
     return Fn(self, *args, **self.kargs)
+
+  def _dump(self):
+    return {
+        'type': type(self),
+        'name': self.name,
+        'kargs': self.kargs,
+        'iswild': self.iswild,
+        'id': id(self)
+        }
 
 class Symbol(Wild):
   '''
@@ -346,9 +417,10 @@ class Symbol(Wild):
   def __new__(typ, name, **kargs):
     self = Wild.__new__(typ, name)
     self.name = name
-    self.kargs = HashableDict(kargs)
+    self.kargs = kargs
     self.iswild = False
     return self
+
 
 class Fn(_Symbolic):
 
@@ -359,7 +431,13 @@ class Fn(_Symbolic):
     valid keyword args:
       commutative (default False) - order of operands is unimportant
     '''
-    args = map(symbolic, args)
+    orig_kargs = copy.copy(kargs)
+    orig_args = copy.copy(args)
+
+    for i in args:
+      if not isinstance(i, _Symbolic):
+        args = list(map(symbolic, args))
+        return Fn.__new__(typ, fn, *args, **kargs)
 
     if len(args) == 2 and 'numeric' in kargs:
       x = args[0]
@@ -409,23 +487,45 @@ class Fn(_Symbolic):
     # if it's commutative, order the args in canonical order and call __new__ with that
     if 'commutative' in kargs and kargs['commutative']:
       args = list(args)
-      args.sort(_order)
-      kargs['commutative'] = False
-      return Fn.__new__(typ, fn, *args, **kargs)
+      oldargs = copy.copy(args)
+      args.sort(cmp=_order)
+      for i in range(len(args)):
+        if oldargs[i] != args[i]:
+          return Fn.__new__(typ, fn, *args, **kargs)
 
     self.name = fn.name
     self.fn = fn
     self.args = args
-    self.kargs = HashableDict(kargs)
+    self.kargs = kargs
+    self.orig_kargs = orig_kargs
+    self.orig_args = orig_args
 
     if self.fn.name == '+' and not self.kargs['associative']:
       print 'NON ASSOC ADDITION'
       traceback.print_stack()
 
-    return _simplify(self._canonicalize())._canonicalize()
+    rv = _simplify(self._canonicalize())._canonicalize()
+
+    #if rv[0].name == '+':
+      #print rv
+      #p = pprint.PrettyPrinter(indent=2)
+      #p.pprint(rv._dump())
+
+    return rv
+
+  def _dump(self):
+    return {
+        'id': id(self),
+        'name': self.name,
+        'fn': self.fn._dump(),
+        'kargs': self.kargs,
+        'args': list(map(lambda x: x._dump(), self.args)),
+        'orig kargs': self.orig_kargs,
+        'orig args': list(map(lambda x: x._dump(), self.orig_args))
+        }
 
   def walk(self, fn):
-    args = map(fn, self.args)
+    args = map(lambda x: x.walk(fn), self.args)
     return fn(self.fn(*args))
 
   def substitute(self, subs):
@@ -471,9 +571,6 @@ class Fn(_Symbolic):
     return rv
 
   def _canonicalize(self):
-    if 'canonicalize' in self.kargs and not self.kargs['canonicalize']:
-      return self
-
     # canonicalize the arguments first
     args = list(map(lambda x: x._canonicalize(), self.args))
     if tuple(args) != tuple(self.args):
@@ -487,9 +584,7 @@ class Fn(_Symbolic):
       args.sort(_order)
       if tuple(args) != oldargs:
         kargs = copy.copy(self.kargs)
-        if 'canonicalize' in kargs:
-          del kargs['canonicalize']
-        self = reduce(lambda a, b: Fn(self.fn, a, b, canonicalize=False, **kargs), args)
+        self = reduce(lambda a, b: Fn(self.fn, a, b, **kargs), args)
 
     return self
 

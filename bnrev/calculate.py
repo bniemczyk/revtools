@@ -123,7 +123,7 @@ def calc(addr=None, graph=None, _loop_headers=None, target=None):
     ist = decode(addr)
 
     # shortcut!!
-    if known != None and \
+    if target != None and \
         ist.mnemonic.lower() == 'mov' and \
         ist.operands[1].type == 'Immediate' and \
         ist.operands[0].type == 'Register' and \

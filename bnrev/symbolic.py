@@ -8,6 +8,7 @@ import types
 import copy
 from hashable import HashableDict
 import pprint
+import operator
 
 def _distribute(op1, op2, exp):
   '''
@@ -148,16 +149,16 @@ class _Symbolic(tuple):
   def __rxor__(self, other, commutative=True, associative=False):
     return Fn.BitXor(other, self, commutative=commutative, associative=associative)
 
-  def __shiftr__(self, other, commutative=False, associative=False):
+  def __rshift__(self, other, commutative=False, associative=False):
     return Fn.RShift(self, other, commutative=commutative, associative=associative)
 
-  def __shiftl__(self, other, commutative=False, associative=False):
+  def __lshift__(self, other, commutative=False, associative=False):
     return Fn.LShift(self, other, commutative=commutative, associative=associative)
 
-  def __rshiftr__(self, other, commutative=False, associative=False):
+  def __rrshift__(self, other, commutative=False, associative=False):
     return Fn.RShift(other, self, commutative=commutative, associative=associative)
 
-  def __rshiftl__(self, other, commutative=False, associative=False):
+  def __rlshift__(self, other, commutative=False, associative=False):
     return Fn.LShift(other, self, commutative=commutative, associative=associative)
 
   def __neg__(self):
@@ -253,22 +254,20 @@ class Number(_Symbolic):
     return symbolic(other.__rsub__(self.n))
 
   def __or__(self, other):
-    if not isinstance(other, Number):
-      other = symbolic(other)
+    other = symbolic(other)
 
     if isinstance(other, Number):
-      return symbolic(int(self.n).__or__(int(other.n)))
+      return symbolic(int(self.n) | int(other.n))
 
     return other.__ror__(self)
 
   def __and__(self, other):
-    if not isinstance(other, Number):
-      other = symbolic(other)
+    other = symbolic(other)
 
     if isinstance(other, Number):
-      return symbolic(int(self.n).__and__(int(other.n)))
+      return symbolic(int(self.n) & int(other.n))
 
-    return symbolic(int(other.n).__rand__(int(self.n)))
+    return symbolic(other).__rand__(int(self.n))
 
   def __xor__(self, other):
     other = symbolic(other)
@@ -278,21 +277,21 @@ class Number(_Symbolic):
 
     return symbolic(other.__rxor__(int(self.n)))
 
-  def __shiftr__(self, other):
+  def __rshift__(self, other):
     other = symbolic(other)
 
     if isinstance(other, Number):
       return symbolic(int(self.n) >> int(other.n))
 
-    return symbolic(other.__rshiftr__(self))
+    return symbolic(other.__rrshift__(self))
 
-  def __shiftl__(self, other):
+  def __lshift__(self, other):
     other = symbolic(other)
 
     if isinstance(other, Number):
       return symbolic(int(self.n) >> int(other.n))
 
-    return symbolic(other.__rshiftl__(self))
+    return symbolic(other.__rlshift__(self))
 
   def __rmul__(self, other):
     if not isinstance(other, Number):
@@ -357,21 +356,21 @@ class Number(_Symbolic):
 
     return symbolic(int(other.n) ^ int(self.n))
 
-  def __rshiftr__(self, other):
+  def __rrshift__(self, other):
     other = symbolic(other)
 
     if isinstance(other, Number):
       return symbolic(int(other.n) >> int(self.n))
 
-    return symbolic(other.__shiftr__(self))
+    return symbolic(other.__rshift__(self))
 
-  def __rshiftl__(self, other):
+  def __rlshift__(self, other):
     other = symbolic(other)
 
     if isinstance(other, Number):
       return symbolic(int(other.n) >> int(self.n))
 
-    return symbolic(other.__shiftl__(self))
+    return symbolic(other.__lshift__(self))
 
 class Wild(_Symbolic):
   '''
@@ -449,7 +448,11 @@ class Fn(_Symbolic):
         else:
           x = x.n
           y = y.n
-        return symbolic(getattr(x, kargs['numeric'])(y))
+        try:
+          nfn = getattr(operator, kargs['numeric'])
+          return symbolic(nfn(x,y))
+        except:
+          raise BaseException("Could not %s %s %s" % (x, kargs['numeric'], y))
 
     if not isinstance(fn, _Symbolic):
       fn = symbolic(fn, **kargs)

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import pprint
 
 class Memoize(object):
     ''' 
@@ -19,7 +20,20 @@ class Memoize(object):
         return self
 
     def __call__(self, *args, **kargs):
-        key = (args, tuple(kargs.keys()), tuple(kargs.values()))
+        #import bnrev.symbolic as sym
+
+        # get our kargs into a standard format
+        kkeys = list(kargs.keys())
+        kkeys.sort()
+        kkeys = tuple(kkeys)
+        kvals = tuple(map(lambda k: kargs[k], kkeys))
+
+        # finally make our key
+        key = (tuple(args), kkeys, kvals)
+
+        #for i in args:
+        #  if isinstance(i, sym.Number) and i.n == -0x88:
+        #    print key
 
         # magic value for functions that have no arguments.. this requires slightly different logic
         skipargs = False
@@ -29,6 +43,7 @@ class Memoize(object):
 
         # if we haven't called the function with the arguments yet, do it
         if key not in self.results:
+            #print key
             tmp = self.f(*args, **kargs) if not skipargs else self.f()
 
             # generators only work once, so we have to expand them to lists in order for

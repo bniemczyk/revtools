@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import memoize
 
 def graph_string(graph):
     rv = []

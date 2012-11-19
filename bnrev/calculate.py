@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import distorm3
-import symbolic
+import symath as symbolic 
 import copy
 import memoize
 import algorithms

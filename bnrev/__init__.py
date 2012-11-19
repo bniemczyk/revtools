@@ -4,7 +4,7 @@ from algorithms import *
 import algorithms
 import directed
 import memoize
-import symbolic
+import symath as symbolic
 
 from symbolic import symbols, wilds, Number
 Number.IFORMAT = hex

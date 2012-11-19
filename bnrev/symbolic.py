@@ -289,7 +289,7 @@ class Number(_Symbolic):
     other = symbolic(other)
 
     if isinstance(other, Number):
-      return symbolic(int(self.n) >> int(other.n))
+      return symbolic(int(self.n) << int(other.n))
 
     return symbolic(other.__rlshift__(self))
 

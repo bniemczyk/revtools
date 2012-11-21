@@ -19,6 +19,8 @@ def op_size(op):
 
 def decode(ea):
   ist = idautils.DecodeInstruction(ea)
+  if ist == None:
+    return None
 
   _bytes = map(lambda x: chr(idc.Byte(ea+x)), range(ist.size))
   _bytes = ''.join(_bytes)

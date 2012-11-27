@@ -137,7 +137,10 @@ def calc(addr=None, graph=None, _loop_headers=None, target=None):
         known = _combine_dicts(known, results)
 
     def _cleanup_derefs(exp):
-      if exp[0].name == '&' and exp[2][0] == DEREF:
+      a,b,c = symbolic.wilds('a b c')
+      val = symbolic.WildResults()
+
+      if exp.match(a & DEREF(b, c), val):
         if (exp[1] & 0xff) == symbolic.symbolic(0xff) and exp[2][1] == symbolic.symbolic(0x1):
           exp = exp[2]
         if (exp[1] & 0xffff) == symbolic.symbolic(0xffff) and exp[2][1] == symbolic.symbolic(0x2):
@@ -153,26 +156,28 @@ def calc(addr=None, graph=None, _loop_headers=None, target=None):
 
     def _set(dst, src, extend=False, iscmp=False, ismov=False):
 
+      dst = dst.simplify()
+      src = src.simplify()
       oldflags = known[eflags] if eflags in known else eflags
 
       if dst[0] == DEREF:
-        dst = dst.substitute(known)
+        dst = dst.substitute(known).simplify()
 
       if src in regmasks:
         mask = regmasks[src][1]
         src = regmasks[src][2]
-        src = (src & mask).substitute(known)
+        src = (src & mask).substitute(known).simplify()
       else:
-        src = src.substitute(regmasks).substitute(known)
+        src = src.substitute(regmasks).substitute(known).simplify()
 
       if dst in regmasks:
         mask = regmasks[dst][1]
         dst = regmasks[dst][2]
         mask = _invert_mask(mask)
-        known[eflags] = ((dst & mask) | src).walk(_cleanup_derefs)
+        known[eflags] = (((dst & mask) | src).walk(_cleanup_derefs)).simplify()
 
       else:
-        known[eflags] = src.walk(_cleanup_derefs)
+        known[eflags] = src.walk(_cleanup_derefs).simplify()
 
       if not iscmp:
         known[dst] = known[eflags]
@@ -219,12 +224,12 @@ def calc(addr=None, graph=None, _loop_headers=None, target=None):
         pesp = esp if esp not in known else known[esp]
 
         if src != None:
-          known[DEREF(ist.operands[0].op_size, pesp+offset)] = src().substitute(known).walk(_cleanup_derefs)
+          known[DEREF(ist.operands[0].op_size, pesp+offset).simplify()] = src().substitute(known).walk(_cleanup_derefs).simplify()
 
         if dst != None:
-          known[dst()] = DEREF(ist.operands[0].op_size, pesp).walk(_cleanup_derefs)
+          known[dst().simplify()] = DEREF(ist.operands[0].op_size, pesp).walk(_cleanup_derefs).simplify()
 
-        known[esp] = pesp+offset
+        known[esp] = (pesp+offset).simplify()
 
     _stack('push', -4, src=lambda: _resolve_ops(ist, 1))
     _stack('pop', 4, dst=lambda: _resolve_ops(ist, 1))
@@ -239,8 +244,8 @@ def calc(addr=None, graph=None, _loop_headers=None, target=None):
 
 
       known[eax] = LOOKUP(AT(CALL(fn), ist.address), eax)
-      known[ecx] = LOOKUP(AT(CALL(fn), ist.address), ecx)
-      known[edx] = LOOKUP(AT(CALL(fn), ist.address), edx)
-      known[esp] = known[esp] + idc.GetSpDiff(ist.address+ist.size) if esp in known else esp + idc.GetSpDiff(ist.address+ist.size)
+      #known[ecx] = LOOKUP(AT(CALL(fn), ist.address), ecx)
+      #known[edx] = LOOKUP(AT(CALL(fn), ist.address), edx)
+      known[esp] = (known[esp] + idc.GetSpDiff(ist.address+ist.size) if esp in known else esp + idc.GetSpDiff(ist.address+ist.size)).simplify()
 
     return known

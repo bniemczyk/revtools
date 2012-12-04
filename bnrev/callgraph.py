@@ -1,4 +1,4 @@
-import directed
+import symath.graph.directed as directed
 
 class CallGraph(directed.DirectedGraph):
     

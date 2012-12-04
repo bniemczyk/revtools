@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from sympy import symbols
-from bnrev.directed import DirectedGraph
+from symath.graph.directed import DirectedGraph
 
 # adjectives
 low,high,medium = symbols('low high medium')

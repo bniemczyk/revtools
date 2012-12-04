@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-from directed import *
-from algorithms import *
-import algorithms
-import directed
+from symath.graph.directed import *
+from symath.graph.algorithms import *
+import symath.graph.algorithms as algorithms
+import symath.graph.directed
 import memoize
 import symath as symbolic
 

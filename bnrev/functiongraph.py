@@ -1,6 +1,6 @@
 #!/usr/bin/env
-import directed
-import algorithms
+import symath.graph.directed as directed
+import symath.graph.algorithms as algorithms
 
 class FunctionGraph(directed.DirectedGraph):
 

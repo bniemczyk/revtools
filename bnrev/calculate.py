@@ -4,7 +4,7 @@ import distorm3
 import symath as symbolic 
 import copy
 import memoize
-import algorithms
+import symath.graph.algorithms as algorithms
 from memoize import Memoize
 from functiongraph import FunctionGraph
 

@@ -5,8 +5,8 @@ import symath.graph.algorithms as algorithms
 import symath.graph.directed
 import memoize
 import symath as symbolic
+from symath import symbols, wilds, Number
 
-from symbolic import symbols, wilds, Number
 Number.IFORMAT = hex
 
 from calculate import *

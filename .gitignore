@@ -2,3 +2,7 @@
 *.swp
 tags
 **/tags
+dist
+build
+*.egg
+*.egg-info

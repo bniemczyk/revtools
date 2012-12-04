@@ -5,6 +5,7 @@ from setuptools import setup
 _depends = '''
 symath
 distorm3
+pysqlite
 '''
 
 setup( \

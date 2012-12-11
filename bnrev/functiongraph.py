@@ -32,10 +32,6 @@ class FunctionGraph(directed.DirectedGraph):
 
 
             self.add_node(h)
-            mnem = idc.GetMnem(h)
-            if mnem == 'retn':
-                self.exit_nodes.add(h)
-
             refs = set(filter(lambda x: x <= end_addr and x >= start_addr, idautils.CodeRefsFrom(h,1)))
             nh = idc.NextHead(h, end_addr)
             if nh != idc.BADADDR and \

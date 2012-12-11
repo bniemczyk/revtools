@@ -25,8 +25,7 @@ def signature(ea=None):
   if ea == None:
     ea = idc.ScreenEA()
 
-  _regs = []
-  off,reg = symath.symbols('off reg')
+  off = symath.symbols('off')
   _signature = symath.symbols('signature')
 
   fg = functiongraph.FunctionGraph(ea)
@@ -38,9 +37,7 @@ def signature(ea=None):
     if isinstance(exp, symath.Number) and int(exp.n) in ns:
       return off(ns.index(int(exp.n)))
     elif is_register(exp) and exp not in (ESP,):
-      if exp not in _regs:
-        _regs.append(exp)
-      return reg(_regs.index(exp))
+      return symath.wild(str(exp))
     else:
       return exp
 

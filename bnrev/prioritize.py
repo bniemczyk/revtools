@@ -70,7 +70,7 @@ def prioritize(ruleset=DEFAULT_RULESET, context=None):
             if d[f] == 0:
                 zeros[f] = True
             else:
-                numerator[f] += float(weight) * math.log(d[f])
+                numerator[f] += float(weight) * math.log(float(d[f]))
                 denominator[f] += float(weight)
 
     for f in fns:

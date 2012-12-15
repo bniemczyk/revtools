@@ -77,8 +77,8 @@ def analyze():
                 objects.analyze_vtables()
                 print 'finding loops with xors'
                 FunctionGraph.tag_xors()
-                print 'prioritizing'
-                prioritize()
+                #print 'prioritizing'
+                #prioritize()
                 print 'locating recursive functions'
                 cg = CallGraph()
                 cg.tag_recursive()

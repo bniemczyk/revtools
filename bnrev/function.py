@@ -14,6 +14,8 @@ def tag(ea, name, value):
   if cmt == None:
     cmt = ''
 
+  value = str(value)
+
   if ('[' + name + ']') in cmt:
     cmt = re.sub(r'\[%s\].*' % (name), '[' + name + '] ' + value, cmt)
   else:

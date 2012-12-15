@@ -46,13 +46,15 @@ class FunctionGraph(directed.DirectedGraph):
         import function
         import idc
         import idautils
+        import symath.graph.signatures as sigs
 
         fns = set(idautils.Functions())
         rv = {}
 
         for f in fns:
             fg = FunctionGraph(f)
-            c = fg.cyclomatic_complexity()
+            #c = fg.cyclomatic_complexity()
+            c = sigs.complexity(fg)[1]
             if c < 0:
                 c = 0
             function.tag(fg.start_addr, 'cyclomatic complexity', c)
@@ -65,7 +67,6 @@ class FunctionGraph(directed.DirectedGraph):
         import function
         import idc
         import idautils
-        import algorithms
 
         fns = set(idautils.Functions())
         rv = {}
@@ -92,7 +93,6 @@ class FunctionGraph(directed.DirectedGraph):
         import function
         import idc
         import idautils
-        import algorithms
 
         fns = set(idautils.Functions())
         rv = {}
@@ -122,6 +122,7 @@ class FunctionGraph(directed.DirectedGraph):
         import idc
         import idautils
         import callgraph
+        import symath.graph.signatures as sigs
 
         cg = callgraph.CallGraph(includeImports=False)
 
@@ -145,7 +146,7 @@ class FunctionGraph(directed.DirectedGraph):
                 if loc not in graphs:
                   continue
                 if loc not in cc:
-                    cc[loc] = graphs[loc].cyclomatic_complexity()
+                    cc[loc] = sigs.complexity(graphs[loc])[1]
                 ac += cc[loc] if cc[loc] > 0 else 0
 
             function.tag(i, 'aggregate complexity', ac)
@@ -158,7 +159,6 @@ class FunctionGraph(directed.DirectedGraph):
         import idc
         import idaapi
         import idautils
-        import algorithms
 
         for fn in idautils.Functions():
             fg = FunctionGraph(fn)

@@ -60,7 +60,7 @@ def resolve_op(ist, opnum):
       rv += symbolic.symbols(distorm3.Registers[op.base].lower())
     if op.disp != None:
       rv += op.disp
-    return DEREF(op.op_size, rv) if ist.mnemonic.lower() != 'lea' else rv
+    return DEREF(op.op_size, rv.simplify()) if ist.mnemonic.lower() != 'lea' else rv
 
   elif op.type == 'Register':
     return symbolic.symbols(distorm3.Registers[op.index].lower())

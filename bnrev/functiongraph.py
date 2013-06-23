@@ -1,6 +1,7 @@
 #!/usr/bin/env
 import symath.graph.directed as directed
 import symath.graph.algorithms as algorithms
+from symath import symbolic
 
 class FunctionGraph(directed.DirectedGraph):
 
@@ -140,7 +141,7 @@ class FunctionGraph(directed.DirectedGraph):
                 cg.strip_edges_to(idc.GetTrueName(f))
 
         for i in fns:
-            ac = 0
+            ac = symbolic(0)
             for j,l in cg.walk(idc.GetTrueName(i), direction='outgoing'):
                 loc = idc.LocByName(j)
                 if loc not in graphs:
@@ -149,6 +150,7 @@ class FunctionGraph(directed.DirectedGraph):
                     cc[loc] = sigs.complexity(graphs[loc])[1]
                 ac += cc[loc] if cc[loc] > 0 else 0
 
+            ac = ac.simplify()
             function.tag(i, 'aggregate complexity', ac)
             rv[i] = ac
 

@@ -11,5 +11,5 @@ _redis_types = {
 def _get_redis_type(obj):
     if type(obj) in _redis_types:
         return _redis_types[type(obj)]
-    else
+    else:
         return 'object'

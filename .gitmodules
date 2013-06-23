@@ -1,3 +1,6 @@
 [submodule "symbolic"]
 	path = symbolic
 	url = https://github.com/bniemczyk/symbolic
+[submodule "automata"]
+	path = automata
+	url = https://github.com/bniemczyk/automata.git

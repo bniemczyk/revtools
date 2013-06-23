@@ -6,6 +6,8 @@ import symath.graph.directed
 import memoize
 import symath as symbolic
 from symath import symbols, wilds, Number
+import idafun
+from idafun import symdecode
 
 Number.IFORMAT = hex
 
@@ -14,7 +16,7 @@ from calculate import *
 try:
     from callgraph import *
     from functiongraph import *
-    from prioritize import *
+    #from prioritize import *
     
     import objects
     import decrypt
@@ -87,3 +89,4 @@ def analyze():
                 print 'locating signed arithmetic'
                 FunctionGraph.tag_signed()
 
+#import xorsearch

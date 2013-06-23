@@ -7,6 +7,7 @@ import function
 import idautils
 import idc
 import idaapi
+import symath
 
 def _invert(dic):
     for k in dic:
@@ -70,8 +71,12 @@ def prioritize(ruleset=DEFAULT_RULESET, context=None):
             if d[f] == 0:
                 zeros[f] = True
             else:
-                numerator[f] += float(weight) * math.log(float(d[f]))
-                denominator[f] += float(weight)
+              try:
+                numerator[f] += symath.desymbolic(weight) * math.log(symath.desymbolic(d[f]))
+                denominator[f] += symath.desymbolic(weight)
+              except:
+                print "could not float/parse either %s or %s" % (weight, d[f])
+                raise
 
     for f in fns:
         if denominator[f] != 0.0 and not zeros[f]:

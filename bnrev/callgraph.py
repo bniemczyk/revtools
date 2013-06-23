@@ -73,7 +73,7 @@ class CallGraph(directed.DirectedGraph):
         import function
         import idautils
         import idc
-        import algorithms
+        import symath.graph.algorithms as algorithms
         funcs = set(idautils.Functions())
         rv = {}
 

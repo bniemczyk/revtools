@@ -6,7 +6,6 @@ _depends = '''
 symath
 distorm3
 pysqlite
-x86-symexec
 automata
 '''
 

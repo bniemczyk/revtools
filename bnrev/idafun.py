@@ -6,6 +6,7 @@ import idautils
 import distorm3
 import symath
 import calculate as calc
+from memoize import Memoize
 
 def op_size(op):
   if op.dtyp in [0]:
@@ -39,9 +40,9 @@ def decode(ea=None):
 
   return ist
 
-def symdecode(ea=None):
-  if ea == None:
-    ea = idc.ScreenEA()
+@Memoize
+def _symdecode(ea):
+  assert ea != None
   ist = decode(ea)
   mnem = symath.symbolic(ist.mnemonic)
   def _resolve_ops(n):
@@ -52,3 +53,6 @@ def symdecode(ea=None):
   ops = _resolve_ops(len(ist.operands))
   ops = map(lambda x: x.simplify(), ops)
   return mnem(*ops)
+
+def symdecode(ea=None):
+  return _symdecode(ea if ea != None else idc.ScreenEA())

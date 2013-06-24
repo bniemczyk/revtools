@@ -4,3 +4,6 @@
 [submodule "automata"]
 	path = automata
 	url = https://github.com/bniemczyk/automata.git
+[submodule "verdata"]
+	path = verdata
+	url = https://github.com/bniemczyk/verdata.git

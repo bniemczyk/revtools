@@ -4,7 +4,9 @@ from idc import GetSpd,ScreenEA,GetSpDiff,SetColor,DEFCOLOR,CIC_ITEM
 from functiongraph import FunctionGraph
 from verdata import VersionedSet
 
-from symath import wilds,WildResults
+from symath import wilds,WildResults,symbols
+from symath.graph.directed import DirectedGraph
+from symath.graph.algorithms import pathQ
 from instructions import *
 
 _colored = set()
@@ -40,6 +42,11 @@ def forward_data_flow(source, ea=None, calldepth=0):
     return exp.substitute({esp: (esp + spd).simplify()})
 
   fg = FunctionGraph(ea)
+
+  # data connections graph
+  TAINTED = symbols('TAINTED')
+  dg = DirectedGraph()
+  dg.connect(TAINTED, source)
   
   for addr,level in fg.walk(ea, depthfirst=True):
     if level <= tainted.version:

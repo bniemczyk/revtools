@@ -25,6 +25,8 @@ class FunctionGraph(directed.DirectedGraph):
         self.start_addr = start_addr
         self.end_addr = end_addr
 
+        self.name = functionName
+
         for h in idautils.Heads(start_addr, end_addr):
             if h == idc.BADADDR:
                 continue
@@ -88,6 +90,24 @@ class FunctionGraph(directed.DirectedGraph):
                     break
 
         return rv
+
+    def has_xor_in_loop(self):
+      import idc
+
+      cylic = algorithms.find_cylic_nodes(self, self.name)
+
+      for n in self.nodes.keys():
+        if type(n) == type('str'):
+          n = idc.LocByName(n)
+
+        m = idc.GetMnem(n)
+        if m != 'xor':
+          continue
+        op0 = idc.GetOpnd(n, 0)
+        op1 = idc.GetOpnd(n, 1)
+        if op0 != op1 and n in cylic:
+          return True
+      return False
 
     @staticmethod
     def tag_signed():

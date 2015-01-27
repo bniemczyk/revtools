@@ -18,6 +18,7 @@ setup( \
   url='http://github.com/bniemczyk/revtools', \
   packages=['bnrev', 'bnrev.malware', 'bnrev.collect', 'bnrev.fuzzy'], \
   test_suite='tests', \
+  scripts=['obfstrings.py'], \
   license='BSD', \
   install_requires=_depends, \
   classifiers = [ \
